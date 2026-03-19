@@ -1,0 +1,312 @@
+[
+  {
+    "timestamp": "2026-03-17T21:58:31",
+    "customer": "Unknown",
+    "items": [
+      {
+        "product": "100 x 6mm",
+        "length": 7.6,
+        "qty": 1,
+        "tonnage": 780.0,
+        "total": 27.92088
+      },
+      {
+        "product": "50 x 50 x 5 mm",
+        "length": 6.3,
+        "qty": 5,
+        "tonnage": 750.0,
+        "total": 88.12125
+      },
+      {
+        "product": "40 x 40 x 2.5mm",
+        "length": 7.6,
+        "qty": 56,
+        "tonnage": 750.0,
+        "total": 938.448
+      }
+    ],
+    "total": 1054.49013,
+    "id": "edb77130ea65473cb2266d16a55d650a"
+  },
+  {
+    "timestamp": "2026-03-17T21:58:39",
+    "customer": "Unknown",
+    "items": [
+      {
+        "product": "100 x 6mm",
+        "length": 7.6,
+        "qty": 1,
+        "tonnage": 780.0,
+        "total": 27.92088
+      },
+      {
+        "product": "50 x 50 x 5 mm",
+        "length": 6.3,
+        "qty": 1,
+        "tonnage": 750.0,
+        "total": 17.62425
+      },
+      {
+        "product": "40 x 40 x 2.5mm",
+        "length": 7.6,
+        "qty": 1,
+        "tonnage": 750.0,
+        "total": 16.758
+      }
+    ],
+    "total": 62.303129999999996,
+    "id": "4c8792b4e7ce4dbb84b8f1e7fc2b37ab"
+  },
+  {
+    "timestamp": "2026-03-17T22:05:17",
+    "customer": "Unknown",
+    "items": [
+      {
+        "product": "100 x 6mm",
+        "length": 7.6,
+        "qty": 1,
+        "tonnage": 750.0,
+        "total": 26.847
+      },
+      {
+        "product": "40 x 40 x 2.5mm",
+        "length": 7.6,
+        "qty": 1,
+        "tonnage": 750.0,
+        "total": 16.758
+      },
+      {
+        "product": "50 x 50 x 3 mm",
+        "length": 7.6,
+        "qty": 1,
+        "tonnage": 750.0,
+        "total": 12.995999999999997
+      }
+    ],
+    "total": 56.601,
+    "id": "a3eb8e8da25740fabfba3357af656bd1"
+  },
+  {
+    "timestamp": "2026-03-17T22:05:40",
+    "customer": "Unknown",
+    "items": [
+      {
+        "product": "100 x 6mm",
+        "length": 7.6,
+        "qty": 1,
+        "tonnage": 750.0,
+        "total": 26.847
+      },
+      {
+        "product": "40 x 40 x 2.5mm",
+        "length": 7.6,
+        "qty": 1,
+        "tonnage": 750.0,
+        "total": 16.758
+      },
+      {
+        "product": "50 x 50 x 3 mm",
+        "length": 7.6,
+        "qty": 1,
+        "tonnage": 750.0,
+        "total": 12.995999999999997
+      }
+    ],
+    "total": 56.601,
+    "id": "849de1cb64c540a7a2c496ad18e4488d"
+  },
+  {
+    "timestamp": "2026-03-19T19:04:51",
+    "customer": "Unknown",
+    "items": [
+      {
+        "product": "50 x 50 x 5 mm",
+        "length": 7.5,
+        "qty": 1,
+        "tonnage": 780.0,
+        "total": 21.82
+      },
+      {
+        "product": "40 x 40 x 6 mm",
+        "length": 6.3,
+        "qty": 1,
+        "tonnage": 780.0,
+        "total": 17.15
+      },
+      {
+        "product": "40 x 40 x 2.5mm",
+        "length": 7.5,
+        "qty": 1,
+        "tonnage": 800.0,
+        "total": 17.64
+      }
+    ],
+    "total": 56.61,
+    "id": "fcf4ce18dda2419ba522272dad56adf3"
+  },
+  {
+    "timestamp": "2026-03-19T20:03:34",
+    "customer": "Unknown",
+    "items": [
+      {
+        "product": "100 x 6mm",
+        "length": 7.5,
+        "qty": 1,
+        "tonnage": 820.0,
+        "total": 28.97
+      },
+      {
+        "product": "50 x 50 x 3 mm",
+        "length": 7.5,
+        "qty": 1,
+        "tonnage": 820.0,
+        "total": 14.02
+      },
+      {
+        "product": "6mm dia",
+        "length": 6.3,
+        "qty": 1,
+        "tonnage": 1100.0,
+        "total": 1.52
+      }
+    ],
+    "total": 44.51,
+    "id": "e1a3b9c9bd864ac3ade7f7f5120c8593"
+  },
+  {
+    "id": "bd0b9247d50b46caa4ab0562787349ad",
+    "timestamp": "2026-03-19T20:19:29",
+    "customer": "Unknown",
+    "items": [
+      {
+        "product": "50 x 50 x 3 mm",
+        "length": 7.5,
+        "qty": 1,
+        "tonnage": 750.0,
+        "total": 12.82
+      },
+      {
+        "product": "40 x 10mm",
+        "length": 6.3,
+        "qty": 1,
+        "tonnage": 810.0,
+        "total": 16.02
+      }
+    ],
+    "total": 28.85
+  },
+  {
+    "id": "4c8f9050bf0b4e4fa7f0b51dd61cb615",
+    "timestamp": "2026-03-19T20:43:19",
+    "customer": "Unknown",
+    "items": [
+      {
+        "product": "25 x 25 x 3 mm",
+        "length": 7.6,
+        "qty": 3,
+        "tonnage": 1050.0,
+        "total": 26.57
+      },
+      {
+        "product": "80 x 80 x 6 mm",
+        "length": 7.6,
+        "qty": 5,
+        "tonnage": 1050.0,
+        "total": 289.27
+      },
+      {
+        "product": "25 x 10mm",
+        "length": 7.6,
+        "qty": 10,
+        "tonnage": 1050.0,
+        "total": 156.41
+      },
+      {
+        "product": "100 x 100 x 8 mm",
+        "length": 7.6,
+        "qty": 1,
+        "tonnage": 1050.0,
+        "total": 96.24
+      }
+    ],
+    "total": 568.5
+  },
+  {
+    "id": "192b3079018b41018baacfd8b5c37fcb",
+    "timestamp": "2026-03-19T21:48:09",
+    "customer": "Unknown",
+    "items": [
+      {
+        "product": "180 x 75 x 20.3kg",
+        "length": 12.0,
+        "qty": 1,
+        "tonnage": 900.0,
+        "total": 219.24
+      },
+      {
+        "product": "30 x 30 x 3 mm",
+        "length": 7.5,
+        "qty": 1,
+        "tonnage": 790.0,
+        "total": 7.94
+      },
+      {
+        "product": "60 x 60 x 6 mm",
+        "length": 7.5,
+        "qty": 1,
+        "tonnage": 790.0,
+        "total": 31.82
+      },
+      {
+        "product": "70 x 70 x 6 mm",
+        "length": 7.5,
+        "qty": 1,
+        "tonnage": 790.0,
+        "total": 37.39
+      },
+      {
+        "product": "80 x 80 x 6 mm",
+        "length": 7.5,
+        "qty": 1,
+        "tonnage": 790.0,
+        "total": 42.96
+      },
+      {
+        "product": "100 x 100 x 8 mm",
+        "length": 12.0,
+        "qty": 1,
+        "tonnage": 790.0,
+        "total": 114.33
+      },
+      {
+        "product": "40 x 25 x 4 mm",
+        "length": 7.5,
+        "qty": 1,
+        "tonnage": 790.0,
+        "total": 11.38
+      },
+      {
+        "product": "60 x 30 x 5 mm",
+        "length": 7.5,
+        "qty": 1,
+        "tonnage": 790.0,
+        "total": 19.79
+      },
+      {
+        "product": "50 x 8mm",
+        "length": 6.3,
+        "qty": 1,
+        "tonnage": 800.0,
+        "total": 15.83
+      },
+      {
+        "product": "125 x 75 x 10mm",
+        "length": 12.0,
+        "qty": 1,
+        "tonnage": 850.0,
+        "total": 152.18
+      }
+    ],
+    "total": 652.84
+  }
+]

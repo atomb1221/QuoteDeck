@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QuoteDeck</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+  <!-- ── Top bar ──────────────────────────────────────────────────────────── -->
+  <header class="topbar">
+    <span class="brand">QuoteDeck</span>
+    <nav class="tab-nav">
+      <button class="tab active" data-tab="email">Quote</button>
+      <button class="tab"        data-tab="products">Products</button>
+      <button class="tab"        data-tab="history">History</button>
+    </nav>
+    <div class="status">
+      <span class="status-dot" id="status-dot"></span>
+      <span id="status-text">loading…</span>
+    </div>
+  </header>
+
+  <!-- ── QUOTE ────────────────────────────────────────────────────────────── -->
+  <section id="tab-email" class="tab-content active">
+
+    <!-- Customer bar -->
+    <div class="customer-bar">
+      <div class="customer-row">
+        <label class="field-label" for="customer-input">Customer</label>
+        <div class="ac-wrap">
+          <input id="customer-input" class="customer-input" placeholder="Type to search or add new customer…" autocomplete="off" spellcheck="false">
+          <div id="customer-dropdown" class="ac-dropdown"></div>
+        </div>
+        <div id="pq-tabs" class="pq-tabs"></div>
+      </div>
+      <div id="pq-items-row" class="pq-items-row"></div>
+    </div>
+
+    <!-- Top panels -->
+    <div class="panels">
+      <div class="panel">
+        <div class="panel-header">Customer Email</div>
+        <textarea id="email-input" placeholder="Paste customer email here…" spellcheck="false"></textarea>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          Pricing Results
+          <button class="btn btn-ghost" id="copy-btn">Copy</button>
+        </div>
+        <pre id="results-output" class="results-output"></pre>
+      </div>
+    </div>
+
+    <!-- Action bar -->
+    <div class="action-bar">
+      <button class="btn btn-action" id="extract-btn">
+        <span class="btn-text">Extract Items</span>
+        <span class="btn-spinner hidden">⟳</span>
+      </button>
+      <button class="btn btn-primary" id="calculate-btn">Calculate Quote</button>
+      <button class="btn btn-ghost"   id="clear-btn">Clear</button>
+    </div>
+
+    <!-- Items table -->
+    <div class="table-wrap">
+      <div class="table-label">
+        Extracted Items
+        <span class="table-label-hint">— edit any field, then Calculate Quote</span>
+      </div>
+      <div class="table-scroll">
+        <table class="items-table" id="items-table">
+          <thead>
+            <tr class="col-headers">
+              <th class="col-num">#</th>
+              <th class="col-product">Product</th>
+              <th class="col-kgm">kg/m</th>
+              <th class="col-qty">Qty</th>
+              <th class="col-length">Length (m)</th>
+              <th class="col-tonnage">Tonnage (£/t)</th>
+              <th class="col-total">Line Total</th>
+            </tr>
+            <tr class="fill-row" id="fill-row">
+              <td colspan="3" class="fill-label">Fill all rows →</td>
+              <td></td>
+              <td><input class="cell-input" id="fill-length"  placeholder="length" type="text"></td>
+              <td><input class="cell-input" id="fill-tonnage" placeholder="tonnage" type="text"></td>
+              <td><button class="btn btn-apply" id="apply-btn">Apply</button></td>
+            </tr>
+          </thead>
+          <tbody id="items-tbody">
+            <tr class="empty-row">
+              <td colspan="7" class="empty-msg">Extract items from an email to begin.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ── PRODUCTS ─────────────────────────────────────────────────────────── -->
+  <section id="tab-products" class="tab-content">
+    <div class="table-wrap" style="flex:1">
+      <div class="table-label" style="display:flex;justify-content:space-between;align-items:center">
+        <span>Products</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input class="search-input" id="product-search" placeholder="Filter…" type="text">
+          <button class="btn btn-primary btn-sm" id="add-product-btn">+ Add Product</button>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table class="items-table">
+          <thead>
+            <tr class="col-headers">
+              <th style="width:36px">#</th>
+              <th style="width:110px">Code</th>
+              <th>Description</th>
+              <th style="width:80px">kg/m</th>
+              <th style="width:80px">Type</th>
+              <th style="width:110px"></th>
+            </tr>
+          </thead>
+          <tbody id="products-tbody">
+            <tr class="empty-row"><td colspan="6" class="empty-msg">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── HISTORY ──────────────────────────────────────────────────────────── -->
+  <section id="tab-history" class="tab-content">
+    <div class="table-wrap" style="flex:1">
+      <div class="table-label" style="display:flex;justify-content:space-between;align-items:center">
+        Recent Quotes
+        <button class="btn btn-ghost btn-sm" id="refresh-history-btn">Refresh</button>
+      </div>
+      <div class="table-scroll">
+        <table class="items-table">
+          <thead>
+            <tr class="col-headers">
+              <th style="width:160px">Date / Time</th>
+              <th>Customer</th>
+              <th style="width:60px">Items</th>
+              <th style="width:120px">Total</th>
+              <th style="width:130px"></th>
+            </tr>
+          </thead>
+          <tbody id="history-tbody">
+            <tr class="empty-row">
+              <td colspan="5" class="empty-msg">No quotes yet.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
