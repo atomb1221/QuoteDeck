@@ -20,15 +20,15 @@ Customer email:
 {email_text}
 
 For each product the customer is requesting, extract:
-- product: the product description EXACTLY as written in the email (e.g. "200x100x8 RHS", "50x50x5 SHS box section")
+- product: ONLY the steel dimensions and type — strip any leading quantity prefix such as "3no", "5no", "1 off", "x2" from the product field. Example: "3no 25x25x3mm angle" → product="25x25x3mm angle", qty=3
 - length: length in metres as a number (e.g. "6 metre long" → 6, "6000mm" → 6, "20 foot" → 6.1). Use 0 if no length is given.
-- qty: quantity requested as a number (e.g. "3no" → 3, "5 off" → 5, "x2" → 2). Default 1 if not stated.
+- qty: the quantity number only (e.g. "3no" → 3, "5 off" → 5, "x2" → 2). Default 1 if not stated.
 - tonnage: price per tonne only if explicitly stated with a £ symbol (e.g. "£850/tonne" → 850). Use 0 otherwise.
 
 RULES:
 - Extract ONLY products the customer explicitly asked for
-- Do NOT add products not mentioned in the email
-- Do NOT substitute or guess — use the customer's exact wording
+- Do NOT include quantity words ("no", "off", "nr") in the product field
+- Do NOT substitute or guess — use the customer's exact wording for dimensions and type
 - Return exactly one item per distinct product request
 
 Return ONLY valid JSON, no commentary:
