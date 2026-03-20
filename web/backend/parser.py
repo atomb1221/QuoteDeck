@@ -25,7 +25,7 @@ def extract_items_from_email(email_text: str, product_list: List[Dict], client) 
                                           "qty": int, "tonnage": float}]}
     """
     product_ref = "\n".join(
-        [f"Code {p['code']}: {p['description']}" for p in product_list[:100]]
+        [f"{p['description']}" for p in product_list]
     )
     prompt = f"""You are analyzing a customer email requesting steel product pricing.
 
