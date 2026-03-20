@@ -1,7 +1,11 @@
-"""SQLite database for PocketPricer — customers, prices, quotes."""
+"""SQLite database for PocketPricer — customers, prices, quotes, users, sessions."""
 import json
+import secrets
 import sqlite3
+from datetime import datetime, timedelta
 from typing import List, Dict, Optional
+
+import bcrypt
 
 
 def _conn(db_path: str) -> sqlite3.Connection:
@@ -34,6 +38,19 @@ def init_db(db_path: str):
                 items_count INTEGER NOT NULL,
                 quote_data  TEXT    NOT NULL,
                 created_at  TEXT    DEFAULT (datetime('now'))
+            );
+            CREATE TABLE IF NOT EXISTS users (
+                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                username      TEXT    UNIQUE NOT NULL,
+                password_hash TEXT    NOT NULL,
+                created_at    TEXT    DEFAULT (datetime('now')),
+                last_login    TEXT
+            );
+            CREATE TABLE IF NOT EXISTS sessions (
+                token      TEXT    PRIMARY KEY,
+                user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                created_at TEXT    DEFAULT (datetime('now')),
+                expires_at TEXT    NOT NULL
             );
         """)
 
@@ -154,3 +171,51 @@ class Database:
             cur = conn.execute("DELETE FROM quotes WHERE id = ?", (quote_id,))
             conn.commit()
         return cur.rowcount > 0
+
+    # ── Users ──────────────────────────────────────────────────────────────────
+
+    def verify_user(self, username: str, password: str) -> Optional[Dict]:
+        """Return user dict if credentials are valid, else None."""
+        with self._conn() as conn:
+            row = conn.execute(
+                "SELECT id, username, password_hash FROM users WHERE username = ?",
+                (username,),
+            ).fetchone()
+        if not row:
+            return None
+        user = dict(row)
+        if bcrypt.checkpw(password.encode(), user["password_hash"].encode()):
+            return {"id": user["id"], "username": user["username"]}
+        return None
+
+    def create_session(self, user_id: int) -> str:
+        """Create a 30-day session, update last_login, return the token."""
+        token = secrets.token_urlsafe(32)
+        expires = (datetime.now() + timedelta(days=30)).isoformat()
+        with self._conn() as conn:
+            conn.execute(
+                "INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)",
+                (token, user_id, expires),
+            )
+            conn.execute(
+                "UPDATE users SET last_login = datetime('now') WHERE id = ?",
+                (user_id,),
+            )
+            conn.commit()
+        return token
+
+    def get_session_user(self, token: str) -> Optional[Dict]:
+        """Return {id, username} if the session token is valid and not expired."""
+        with self._conn() as conn:
+            row = conn.execute(
+                """SELECT u.id, u.username
+                   FROM sessions s JOIN users u ON s.user_id = u.id
+                   WHERE s.token = ? AND s.expires_at > datetime('now')""",
+                (token,),
+            ).fetchone()
+        return dict(row) if row else None
+
+    def delete_session(self, token: str):
+        with self._conn() as conn:
+            conn.execute("DELETE FROM sessions WHERE token = ?", (token,))
+            conn.commit()

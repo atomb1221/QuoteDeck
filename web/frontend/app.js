@@ -9,11 +9,28 @@ let allProducts = [];      // full product list from server
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  checkAuth();
   initTabs();
   fetchStatus();
   wireButtons();
   initCustomer();
 });
+
+// ── Auth ───────────────────────────────────────────────────────────────────────
+async function checkAuth() {
+  try {
+    const res = await fetch('/me');
+    if (res.status === 401) { window.location.href = '/login'; return; }
+    const user = await res.json();
+    document.getElementById('user-name').textContent = user.username;
+    if (user.username === 'admin') {
+      document.getElementById('admin-warning').classList.remove('hidden');
+    }
+  } catch {
+    window.location.href = '/login';
+  }
+}
+
 
 // ── Tab switching ─────────────────────────────────────────────────────────────
 function initTabs() {
@@ -59,6 +76,12 @@ function wireButtons() {
 
   // History tab
   document.getElementById('refresh-history-btn').addEventListener('click', loadHistory);
+
+  // Auth
+  document.getElementById('logout-btn').addEventListener('click', async () => {
+    await fetch('/logout', { method: 'POST' });
+    window.location.href = '/login';
+  });
 }
 
 // ── Customer autocomplete ─────────────────────────────────────────────────────

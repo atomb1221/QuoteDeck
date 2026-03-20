@@ -4,3 +4,4 @@ anthropic
 openpyxl
 python-multipart
 aiofiles
+bcrypt

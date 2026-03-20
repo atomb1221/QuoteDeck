@@ -3,11 +3,12 @@ import json
 import os
 from typing import List, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from .database import ProductDatabase
 from .pricer import calculate_line_price
@@ -49,9 +50,33 @@ if _key and not _key.startswith("your-"):
     from anthropic import Anthropic
     _claude_client = Anthropic(api_key=_key)
 
-# ── App ────────────────────────────────────────────────────────────────────────
-app = FastAPI(title="QuoteDeck", docs_url="/api/docs")
+# ── Auth middleware ─────────────────────────────────────────────────────────────
+class AuthMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        path = request.url.path
 
+        # Always allow login page, login POST, and static assets
+        if path == "/login" or path.startswith("/static/"):
+            return await call_next(request)
+
+        # Check session cookie
+        token = request.cookies.get("session")
+        user  = db.get_session_user(token) if token else None
+
+        if not user:
+            # Browser page request → redirect; API/fetch request → 401 JSON
+            if "text/html" in request.headers.get("accept", "") and request.method == "GET":
+                return RedirectResponse("/login", status_code=302)
+            return JSONResponse({"detail": "Not authenticated"}, status_code=401)
+
+        request.state.user = user
+        return await call_next(request)
+
+
+# ── App ────────────────────────────────────────────────────────────────────────
+app = FastAPI(title="Tonnage", docs_url="/api/docs")
+
+app.add_middleware(AuthMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -65,6 +90,44 @@ app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 @app.get("/", include_in_schema=False)
 def root():
     return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
+
+
+@app.get("/login", include_in_schema=False)
+def login_page():
+    return FileResponse(os.path.join(FRONTEND_DIR, "login.html"))
+
+
+# ── Auth endpoints ──────────────────────────────────────────────────────────────
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+@app.post("/login")
+def login(req: LoginRequest, response: Response):
+    user = db.verify_user(req.username, req.password)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    token = db.create_session(user["id"])
+    response.set_cookie("session", token, httponly=True, samesite="lax", max_age=30 * 24 * 3600)
+    return {"username": user["username"]}
+
+
+@app.post("/logout")
+def logout(request: Request, response: Response):
+    token = request.cookies.get("session")
+    if token:
+        db.delete_session(token)
+    response.delete_cookie("session")
+    return {"ok": True}
+
+
+@app.get("/me")
+def me(request: Request):
+    user = getattr(request.state, "user", None)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return user
 
 
 # ── Models ─────────────────────────────────────────────────────────────────────

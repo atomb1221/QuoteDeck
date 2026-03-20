@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tonnage — Sign In</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body class="login-body">
+
+  <div class="login-card">
+    <img src="/static/logo.png" class="login-logo" alt="Tonnage">
+
+    <form class="login-form" id="login-form" autocomplete="on">
+      <div class="login-field">
+        <label class="login-label" for="username">Username</label>
+        <input class="login-input" id="username" name="username" type="text"
+               autocomplete="username" autofocus required>
+      </div>
+      <div class="login-field">
+        <label class="login-label" for="password">Password</label>
+        <input class="login-input" id="password" name="password" type="password"
+               autocomplete="current-password" required>
+      </div>
+
+      <div id="login-error" class="login-error hidden"></div>
+
+      <button class="btn btn-primary login-btn" type="submit" id="login-btn">Sign In</button>
+    </form>
+  </div>
+
+  <script>
+    document.getElementById('login-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const btn      = document.getElementById('login-btn');
+      const err      = document.getElementById('login-error');
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+
+      btn.disabled    = true;
+      btn.textContent = 'Signing in…';
+      err.classList.add('hidden');
+
+      try {
+        const res = await fetch('/login', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ username, password }),
+        });
+
+        if (res.ok) {
+          window.location.href = '/';
+        } else {
+          const data = await res.json().catch(() => ({}));
+          err.textContent = data.detail || 'Invalid username or password';
+          err.classList.remove('hidden');
+          btn.disabled    = false;
+          btn.textContent = 'Sign In';
+          document.getElementById('password').select();
+        }
+      } catch {
+        err.textContent = 'Could not connect to server';
+        err.classList.remove('hidden');
+        btn.disabled    = false;
+        btn.textContent = 'Sign In';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -612,3 +612,132 @@ body {
   z-index: 99;
 }
 .toast.show { opacity: 1; transform: translateY(0); }
+
+/* ── Login page ──────────────────────────────────────────────────────────────── */
+.login-body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  overflow: auto;
+  /* override body flex-direction */
+  flex-direction: row !important;
+}
+
+.login-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.09);
+  padding: 40px 48px;
+  width: 340px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+
+.login-logo {
+  height: 38px;
+  width: auto;
+  object-fit: contain;
+}
+
+.login-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.login-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.login-input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  height: 36px;
+  outline: none;
+  padding: 0 12px;
+  width: 100%;
+  transition: border-color 0.1s;
+}
+.login-input:focus { border-color: var(--accent); }
+
+.login-btn {
+  width: 100%;
+  height: 36px;
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+.login-error {
+  background: #FEE2E2;
+  border: 1px solid #FCA5A5;
+  border-radius: 3px;
+  color: var(--red);
+  font-size: 12px;
+  padding: 8px 12px;
+  text-align: center;
+}
+
+/* ── User pill in top bar ────────────────────────────────────────────────────── */
+.user-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: 16px;
+}
+
+.user-name {
+  font-size: 12px;
+  color: rgba(255,255,255,0.75);
+  font-weight: 500;
+}
+
+.btn-logout {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 3px;
+  color: rgba(255,255,255,0.7);
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 500;
+  height: 24px;
+  padding: 0 10px;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+  white-space: nowrap;
+}
+.btn-logout:hover {
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(255,255,255,0.55);
+  color: #fff;
+}
+
+/* ── Admin warning banner ────────────────────────────────────────────────────── */
+.admin-warning {
+  background: #FFFBEB;
+  border-bottom: 1px solid #FDE68A;
+  color: #92400E;
+  font-size: 12px;
+  padding: 6px 18px;
+  flex-shrink: 0;
+  text-align: center;
+}
