@@ -68,6 +68,14 @@ body {
   flex-shrink: 0;
   letter-spacing: 0.02em;
 }
+.brand-logo {
+  height: 28px;
+  width: auto;
+  margin-right: 32px;
+  flex-shrink: 0;
+  display: block;
+  object-fit: contain;
+}
 
 .tab-nav {
   display: flex;
