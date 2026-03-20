@@ -267,10 +267,13 @@ async function extractItems() {
 
     renderTable(extractedItems);
 
-    const notFound = data.not_found || [];
-    if (notFound.length) {
-      const list = notFound.map(d => `"${d}"`).join(', ');
-      setResults(`⚠ ${notFound.length} item(s) not found in your product list: ${list}. Check spelling or add them via the Products tab.`, true);
+    const notFound  = data.not_found || [];
+    const ambiguous = data.ambiguous || [];
+    if (notFound.length || ambiguous.length) {
+      const parts = [];
+      if (ambiguous.length) parts.push(`${ambiguous.length} item(s) need clarification (see table)`);
+      if (notFound.length)  parts.push(`${notFound.length} item(s) not found in product list`);
+      setResults('⚠ ' + parts.join(' · ') + '.', true);
     } else {
       setResults('Items extracted — review the table, then click Calculate Quote.');
     }
@@ -299,16 +302,52 @@ function renderTable(items) {
     tr.dataset.index   = i;
     tr.dataset.weight  = item.weight  || 0;
     tr.dataset.isSheet = item.is_sheet ? 'true' : 'false';
+    if (item.ambiguous) tr.classList.add('row-ambiguous');
+
+    // Product cell — show inline selector if ambiguous
+    let productCell;
+    if (item.ambiguous && item.candidates?.length) {
+      const opts = item.candidates.map((c, ci) =>
+        `<option value="${ci}">${esc(c.description)} (${c.weight.toFixed(2)} kg/m)</option>`
+      ).join('');
+      productCell = `
+        <td class="col-product ambiguous-cell">
+          <span class="ambig-icon" title="Clarification needed">⚠</span>
+          <span class="ambig-label">${esc(item.requested || item.product)}</span>
+          <select class="ambig-select" data-index="${i}">
+            <option value="">— select type —</option>
+            ${opts}
+          </select>
+        </td>`;
+    } else {
+      productCell = `<td class="col-product">${esc(item.product)}</td>`;
+    }
 
     tr.innerHTML = `
       <td class="td-num">${i + 1}</td>
-      <td class="col-product">${esc(item.product)}</td>
+      ${productCell}
       <td class="td-kgm">${item.weight ? item.weight.toFixed(2) : '?'}</td>
       <td><input class="cell-input" data-field="qty"     value="${item.qty     || 1}"   tabindex="${i * 3 + 1}"></td>
       <td><input class="cell-input" data-field="length"  value="${item.length  || ''}"  placeholder="m"   tabindex="${i * 3 + 2}"></td>
       <td><input class="cell-input" data-field="tonnage" value="${item.tonnage || ''}"  placeholder="£/t" tabindex="${i * 3 + 3}"></td>
       <td class="td-total line-total">—</td>
     `;
+
+    // Disambiguation select handler
+    const sel = tr.querySelector('.ambig-select');
+    if (sel) {
+      sel.addEventListener('change', () => {
+        const ci = parseInt(sel.value);
+        if (isNaN(ci)) return;
+        const chosen = extractedItems[i].candidates[ci];
+        extractedItems[i].product   = chosen.description;
+        extractedItems[i].weight    = chosen.weight;
+        extractedItems[i].is_sheet  = chosen.is_sheet || false;
+        extractedItems[i].matched   = true;
+        extractedItems[i].ambiguous = false;
+        renderTable(extractedItems);
+      });
+    }
 
     tr.querySelectorAll('.cell-input').forEach(input => {
       input.addEventListener('input', () => recalcLine(tr));

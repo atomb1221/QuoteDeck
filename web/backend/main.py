@@ -18,9 +18,21 @@ from . import parser
 BASE_DIR     = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # web/
 ROOT_DIR     = os.path.dirname(BASE_DIR)                                     # SteelPricer/
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
-PRODUCTS_XLS = os.path.join(ROOT_DIR, "products.xlsx")
-SQLITE_DB    = os.path.join(ROOT_DIR, "pocketpricer.db")
 CONFIG_FILE  = os.path.join(ROOT_DIR, "config.json")
+
+# DATA_DIR: set to Railway volume mount path (e.g. /data) for persistent storage.
+# Falls back to the repo root for local runs.
+_DATA_DIR = os.environ.get("DATA_DIR", ROOT_DIR)
+PRODUCTS_XLS = os.path.join(_DATA_DIR, "products.xlsx")
+SQLITE_DB    = os.path.join(_DATA_DIR, "pocketpricer.db")
+
+# On first deploy with a volume, seed products.xlsx from the repo copy
+if _DATA_DIR != ROOT_DIR:
+    import shutil
+    os.makedirs(_DATA_DIR, exist_ok=True)
+    _repo_products = os.path.join(ROOT_DIR, "products.xlsx")
+    if not os.path.exists(PRODUCTS_XLS) and os.path.exists(_repo_products):
+        shutil.copy(_repo_products, PRODUCTS_XLS)
 
 # ── Services ───────────────────────────────────────────────────────────────────
 products_db = ProductDatabase(PRODUCTS_XLS)
@@ -156,29 +168,64 @@ def extract(req: ExtractRequest):
 
     enriched = []
     for item in result.get("items", []):
-        # Claude extracted the raw customer text; Python does the exact matching
-        product = products_db.find_product(item["product"])
-        matched = product is not None
-        enriched.append({
-            **item,
-            # Keep the customer's original description so it's visible if unmatched
-            "requested":  item["product"],
-            # Replace with exact DB description only when matched
-            "product":    product["description"] if matched else item["product"],
-            "weight":     product["weight"] if matched else 0.0,
-            "is_sheet":   (
-                product.get("type", "").lower() == "sheet"
-                or "sheet" in product.get("description", "").lower()
-            ) if matched else False,
-            "matched":    matched,
-            "not_found":  not matched,
-        })
+        requested  = item["product"]
+        candidates = products_db.find_all_products(requested)
 
-    not_found = [e["requested"] for e in enriched if e["not_found"]]
+        def _is_sheet(p):
+            return (p.get("type", "").lower() == "sheet"
+                    or "sheet" in p.get("description", "").lower())
+
+        if not candidates:
+            # Not in database at all
+            enriched.append({**item, "requested": requested, "matched": False,
+                             "not_found": True, "ambiguous": False,
+                             "weight": 0.0, "is_sheet": False})
+
+        elif len(candidates) == 1:
+            # Unambiguous match
+            p = candidates[0]
+            enriched.append({**item, "requested": requested,
+                             "product": p["description"], "weight": p["weight"],
+                             "is_sheet": _is_sheet(p), "matched": True,
+                             "not_found": False, "ambiguous": False})
+
+        else:
+            # Multiple matches — try type-hint auto-resolution first
+            hint = products_db.type_hint_from_text(requested)
+            if hint:
+                filtered = [c for c in candidates
+                            if products_db.product_matches_type_hint(c, hint)]
+                if len(filtered) == 1:
+                    p = filtered[0]
+                    enriched.append({**item, "requested": requested,
+                                     "product": p["description"], "weight": p["weight"],
+                                     "is_sheet": _is_sheet(p), "matched": True,
+                                     "not_found": False, "ambiguous": False})
+                    continue
+
+            # Still ambiguous — send candidates to the frontend for the user to choose
+            enriched.append({
+                **item,
+                "requested":  requested,
+                "matched":    False,
+                "not_found":  False,
+                "ambiguous":  True,
+                "candidates": [{"description": c["description"],
+                                "weight": c["weight"],
+                                "type": c.get("type", ""),
+                                "is_sheet": _is_sheet(c)}
+                               for c in candidates],
+                "weight":   0.0,
+                "is_sheet": False,
+            })
+
+    not_found = [e["requested"] for e in enriched if e.get("not_found")]
+    ambiguous  = [e["requested"] for e in enriched if e.get("ambiguous")]
     return {
         "customer_name": result.get("customer_name", ""),
         "items":         enriched,
-        "not_found":     not_found,   # list of unmatched descriptions for UI warning
+        "not_found":     not_found,
+        "ambiguous":     ambiguous,
     }
 
 
