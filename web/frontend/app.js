@@ -365,7 +365,7 @@ function renderTable(items) {
       : `<td><input class="cell-input" data-field="length" value="${item.length || ''}" placeholder="m" tabindex="${i * 3 + 2}"></td>`;
 
     tr.innerHTML = `
-      <td class="td-num">${i + 1}</td>
+      <td class="td-num"><span class="row-num">${i + 1}</span><button class="btn-remove" title="Remove row">−</button></td>
       ${productCell}
       <td class="td-kgm">${weightCell}</td>
       <td><input class="cell-input" data-field="qty"     value="${item.qty     || 1}"   tabindex="${i * 3 + 1}"></td>
@@ -389,6 +389,11 @@ function renderTable(items) {
         renderTable(extractedItems);
       });
     }
+
+    tr.querySelector('.btn-remove').addEventListener('click', () => {
+      extractedItems.splice(i, 1);
+      renderTable(extractedItems);
+    });
 
     tr.querySelectorAll('.cell-input').forEach(input => {
       input.addEventListener('input', () => recalcLine(tr));

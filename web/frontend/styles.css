@@ -478,7 +478,24 @@ body {
 
 .items-table tbody td.col-product { color: var(--text); }
 
-.td-num  { color: var(--text-dim); font-size: 11px; font-family: var(--font-num); }
+.td-num  { color: var(--text-dim); font-size: 11px; font-family: var(--font-num); position: relative; }
+
+.btn-remove {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--red);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  padding: 0;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+tr:hover .row-num  { visibility: hidden; }
+tr:hover .btn-remove { display: block; }
 .td-kgm  { color: var(--text-muted); font-family: var(--font-num); font-size: 12px; }
 
 /* Sheet rows */
