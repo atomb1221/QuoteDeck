@@ -27,6 +27,7 @@ class ProductDatabase:
         return re.sub(r"\s+", "", text.lower())
 
     def find_product(self, search_term: str) -> Optional[Dict]:
+        self.load_products()
         sn = self.normalize(search_term)
         ss = search_term.lstrip("0") or "0"
         for p in self.products:
@@ -39,20 +40,24 @@ class ProductDatabase:
         return None
 
     def get_all(self) -> List[Dict]:
+        self.load_products()
         return self.products
 
     def add_product(self, code: str, description: str, weight: float, type_: str) -> Dict:
+        self.load_products()
         product = {"code": code, "description": description, "weight": weight, "type": type_}
         self.products.append(product)
         self._save()
         return product
 
     def update_product(self, idx: int, code: str, description: str, weight: float, type_: str) -> Dict:
+        self.load_products()
         self.products[idx] = {"code": code, "description": description, "weight": weight, "type": type_}
         self._save()
         return self.products[idx]
 
     def delete_product(self, idx: int):
+        self.load_products()
         self.products.pop(idx)
         self._save()
 
