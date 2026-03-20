@@ -620,27 +620,27 @@ body {
   justify-content: center;
   min-height: 100vh;
   overflow: auto;
-  /* override body flex-direction */
   flex-direction: row !important;
+  background: var(--accent);
 }
 
 .login-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.09);
-  padding: 40px 48px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0 32px;
   width: 340px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 28px;
+  gap: 32px;
 }
 
 .login-logo {
-  height: 38px;
+  height: 44px;
   width: auto;
   object-fit: contain;
+  filter: brightness(0) invert(1);
 }
 
 .login-form {
@@ -659,38 +659,48 @@ body {
 .login-label {
   font-size: 11px;
   font-weight: 600;
-  color: var(--accent);
+  color: rgba(255,255,255,0.7);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
 }
 
 .login-input {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.3);
   border-radius: 3px;
-  color: var(--text);
+  color: #ffffff;
   font-family: var(--font);
   font-size: 13px;
-  height: 36px;
+  height: 38px;
   outline: none;
   padding: 0 12px;
   width: 100%;
-  transition: border-color 0.1s;
+  transition: border-color 0.15s, background 0.15s;
 }
-.login-input:focus { border-color: var(--accent); }
+.login-input:focus {
+  border-color: rgba(255,255,255,0.8);
+  background: rgba(255,255,255,0.18);
+}
+.login-input::placeholder { color: rgba(255,255,255,0.3); }
 
 .login-btn {
   width: 100%;
-  height: 36px;
+  height: 38px;
   margin-top: 6px;
   font-size: 13px;
+  font-weight: 600;
+  background: #ffffff;
+  color: var(--accent);
+  border-radius: 3px;
 }
+.login-btn:hover    { background: rgba(255,255,255,0.9); }
+.login-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .login-error {
-  background: #FEE2E2;
-  border: 1px solid #FCA5A5;
+  background: rgba(0,0,0,0.2);
+  border: 1px solid rgba(255,255,255,0.25);
   border-radius: 3px;
-  color: var(--red);
+  color: #FCA5A5;
   font-size: 12px;
   padding: 8px 12px;
   text-align: center;
