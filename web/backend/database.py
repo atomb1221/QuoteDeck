@@ -55,6 +55,8 @@ class ProductDatabase:
         (r'\bchecker\b',     'chequer'),
         (r'\bhot\s*rolled\b', 'hr'),
         (r'\bcold\s*rolled\b', 'cr'),
+        (r'\bround\s+bar\b', 'rb'),     # "round bar" → "rb" for type matching
+        (r'\bflat\s+bar\b',  'fb'),     # "flat bar"  → "fb" for type matching
     ]
 
     @staticmethod
@@ -128,12 +130,19 @@ class ProductDatabase:
             if dn and dn in sn and len(dn) >= len(sn) * 0.65:
                 return p
 
-        # 5. Dimension + type fuzzy match
+        # 5. Dimension + type fuzzy match (expand DB descriptions too)
         s_type, s_nums = self._parse_section(search_term)
         if len(s_nums) >= 2:
             for p in self.products:
-                p_type, p_nums = self._parse_section(p["description"])
+                p_type, p_nums = self._parse_section(self._expand_search(p["description"]))
                 if s_nums == p_nums and (not s_type or not p_type or s_type == p_type):
+                    return p
+
+        # 5b. Single-dimension + type match (e.g. "12mm round bar" → "12 RB")
+        if len(s_nums) == 1 and s_type:
+            for p in self.products:
+                p_type, p_nums = self._parse_section(self._expand_search(p["description"]))
+                if p_type and s_nums == p_nums and s_type == p_type:
                     return p
 
         return None
