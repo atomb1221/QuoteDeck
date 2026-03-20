@@ -38,6 +38,7 @@ if _DATA_DIR != ROOT_DIR:
 # ── Services ───────────────────────────────────────────────────────────────────
 products_db = ProductDatabase(PRODUCTS_XLS)
 db          = Database(SQLITE_DB)
+db.seed_admin_if_empty()   # creates admin/admin on first deploy if no users exist
 
 # Load Claude client — env var takes priority (Railway), fallback to config.json (local)
 _claude_client = None

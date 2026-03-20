@@ -219,3 +219,15 @@ class Database:
         with self._conn() as conn:
             conn.execute("DELETE FROM sessions WHERE token = ?", (token,))
             conn.commit()
+
+    def seed_admin_if_empty(self):
+        """Create admin/admin if no users exist (first-deploy seed)."""
+        with self._conn() as conn:
+            count = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+            if count == 0:
+                password_hash = bcrypt.hashpw(b"admin", bcrypt.gensalt()).decode()
+                conn.execute(
+                    "INSERT INTO users (username, password_hash) VALUES (?, ?)",
+                    ("admin", password_hash),
+                )
+                conn.commit()
