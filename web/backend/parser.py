@@ -21,9 +21,9 @@ Customer email:
 
 For each product the customer is requesting, extract:
 - product: the product description EXACTLY as written in the email (e.g. "200x100x8 RHS", "50x50x5 SHS box section")
-- length: length in metres if stated (numeric only, 0 if not mentioned)
-- qty: quantity requested (numeric only, default 1 if not stated)
-- tonnage: price per tonne only if explicitly stated with £ symbol (0 otherwise)
+- length: length in metres as a number (e.g. "6 metre long" → 6, "6000mm" → 6, "20 foot" → 6.1). Use 0 if no length is given.
+- qty: quantity requested as a number (e.g. "3no" → 3, "5 off" → 5, "x2" → 2). Default 1 if not stated.
+- tonnage: price per tonne only if explicitly stated with a £ symbol (e.g. "£850/tonne" → 850). Use 0 otherwise.
 
 RULES:
 - Extract ONLY products the customer explicitly asked for

@@ -304,9 +304,10 @@ function renderTable(items) {
     tr.dataset.isSheet = item.is_sheet ? 'true' : 'false';
     if (item.ambiguous) tr.classList.add('row-ambiguous');
 
-    // Product cell — show inline selector if ambiguous
+    // Product cell
     let productCell;
     if (item.ambiguous && item.candidates?.length) {
+      // Multiple matches — show inline selector
       const opts = item.candidates.map((c, ci) =>
         `<option value="${ci}">${esc(c.description)} (${c.weight.toFixed(2)} kg/m)</option>`
       ).join('');
@@ -319,7 +320,15 @@ function renderTable(items) {
             ${opts}
           </select>
         </td>`;
+    } else if (item.not_found) {
+      // No match — show customer's text with NOT FOUND badge
+      productCell = `
+        <td class="col-product not-found-cell">
+          <span class="not-found-badge">NOT FOUND</span>
+          <span class="not-found-text" title="Add this product via the Products tab">${esc(item.requested || item.product)}</span>
+        </td>`;
     } else {
+      // Matched — show exact DB description
       productCell = `<td class="col-product">${esc(item.product)}</td>`;
     }
 
