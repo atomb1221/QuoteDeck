@@ -46,12 +46,15 @@ class ProductDatabase:
         return re.sub(r"\s+", "", text.lower())
 
     def _parse_section(self, text: str) -> Tuple[Optional[str], tuple]:
-        """Return (section_type | None, tuple_of_numeric_strings)."""
+        """Return (section_type | None, tuple_of_floats) for fuzzy matching.
+
+        Numbers are stored as floats so "6" and "6.0" compare equal.
+        """
         t = text.lower()
         section_type = next(
             (st for st in self._SECTION_TYPES if re.search(rf'\b{st}\b', t)), None
         )
-        nums = tuple(re.findall(r'\d+(?:\.\d+)?', text))
+        nums = tuple(float(n) for n in re.findall(r'\d+(?:\.\d+)?', text))
         return section_type, nums
 
     def type_hint_from_text(self, text: str) -> Optional[str]:
