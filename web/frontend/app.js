@@ -266,7 +266,14 @@ async function extractItems() {
     currentCustomer = document.getElementById('customer-input').value.trim() || data.customer_name || '';
 
     renderTable(extractedItems);
-    setResults('Items extracted — review the table, then click Calculate Quote.');
+
+    const notFound = data.not_found || [];
+    if (notFound.length) {
+      const list = notFound.map(d => `"${d}"`).join(', ');
+      setResults(`⚠ ${notFound.length} item(s) not found in your product list: ${list}. Check spelling or add them via the Products tab.`, true);
+    } else {
+      setResults('Items extracted — review the table, then click Calculate Quote.');
+    }
 
   } catch (e) {
     toast(`Request failed: ${e.message}`, true);
@@ -429,8 +436,10 @@ function clearAll() {
   selectedCustomerId = null;
 }
 
-function setResults(text) {
-  document.getElementById('results-output').textContent = text;
+function setResults(text, isWarning = false) {
+  const el = document.getElementById('results-output');
+  el.textContent = text;
+  el.style.color = isWarning ? '#B45309' : '';
 }
 
 // ── Copy to clipboard ─────────────────────────────────────────────────────────

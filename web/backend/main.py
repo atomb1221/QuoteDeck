@@ -156,20 +156,29 @@ def extract(req: ExtractRequest):
 
     enriched = []
     for item in result.get("items", []):
+        # Claude extracted the raw customer text; Python does the exact matching
         product = products_db.find_product(item["product"])
+        matched = product is not None
         enriched.append({
             **item,
-            "weight":   product["weight"] if product else 0.0,
-            "is_sheet": (
+            # Keep the customer's original description so it's visible if unmatched
+            "requested":  item["product"],
+            # Replace with exact DB description only when matched
+            "product":    product["description"] if matched else item["product"],
+            "weight":     product["weight"] if matched else 0.0,
+            "is_sheet":   (
                 product.get("type", "").lower() == "sheet"
                 or "sheet" in product.get("description", "").lower()
-            ) if product else False,
-            "matched": product is not None,
+            ) if matched else False,
+            "matched":    matched,
+            "not_found":  not matched,
         })
 
+    not_found = [e["requested"] for e in enriched if e["not_found"]]
     return {
         "customer_name": result.get("customer_name", ""),
-        "items": enriched,
+        "items":         enriched,
+        "not_found":     not_found,   # list of unmatched descriptions for UI warning
     }
 
 
