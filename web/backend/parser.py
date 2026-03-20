@@ -25,10 +25,18 @@ For each product the customer is requesting, extract:
 - qty: the quantity number only (e.g. "3no" → 3, "5 off" → 5, "x2" → 2). Default 1 if not stated.
 - tonnage: price per tonne only if explicitly stated with a £ symbol (e.g. "£850/tonne" → 850). Use 0 otherwise.
 
+TERMINOLOGY TO EXPAND:
+- "8x4" or "8 x 4" sheet = 2500 x 1250mm sheet (write as "2500 x 1250")
+- "10x5" or "10 x 5" sheet = 3000 x 1500mm sheet (write as "3000 x 1500")
+- "Galv" or "Galvanised" are the same — use whichever the customer wrote
+- "Chequer" and "Checker" are the same
+- "HR" = Hot Rolled, "CR" = Cold Rolled
+
 RULES:
 - Extract ONLY products the customer explicitly asked for
 - Do NOT include quantity words ("no", "off", "nr") in the product field
 - Do NOT substitute or guess — use the customer's exact wording for dimensions and type
+- For sheet products (HR sheet, Galv sheet, Zintec etc.), length is 0 — sheets are sold per sheet not per metre
 - Return exactly one item per distinct product request
 
 Return ONLY valid JSON, no commentary:

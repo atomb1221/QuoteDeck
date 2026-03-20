@@ -171,9 +171,9 @@ def extract(req: ExtractRequest):
         requested  = item["product"]
         candidates = products_db.find_all_products(requested)
 
+        from .pricer import is_sheet as _is_sheet_fn
         def _is_sheet(p):
-            return (p.get("type", "").lower() == "sheet"
-                    or "sheet" in p.get("description", "").lower())
+            return _is_sheet_fn(p)
 
         if not candidates:
             # Not in database at all
@@ -241,12 +241,10 @@ def calculate(req: CalculateRequest):
             lines.append({"product": item.product, "total": None, "error": "Not found"})
             continue
 
+        from .pricer import is_sheet as _is_sheet_fn
         total = calculate_line_price(product, item.length, item.qty, item.tonnage)
         grand += total
-        is_sheet = (
-            product.get("type", "").lower() == "sheet"
-            or "sheet" in product.get("description", "").lower()
-        )
+        is_sheet = _is_sheet_fn(product)
         line = {
             "product":  product["description"],
             "length":   item.length,

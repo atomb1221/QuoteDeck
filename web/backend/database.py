@@ -42,6 +42,34 @@ class ProductDatabase:
     _SECTION_TYPES = {'shs', 'rhs', 'chs', 'ub', 'uc', 'pfc', 'ea', 'ua',
                       'tee', 'fb', 'rb', 'hb', 'ms', 'box'}
 
+    # Sheet size shorthand → standard mm dimensions used in DB descriptions
+    _SHEET_SIZES = [
+        (r'\b8\s*[x×]\s*4\b',   '2500 x 1250'),
+        (r'\b10\s*[x×]\s*5\b',  '3000 x 1500'),
+    ]
+
+    # Common terminology synonyms
+    _TERMINOLOGY = [
+        (r'\bgalvanised\b',  'galv'),   # normalise to shorter form first
+        (r'\bchequer\b',     'chequer'),
+        (r'\bchecker\b',     'chequer'),
+        (r'\bhot\s*rolled\b', 'hr'),
+        (r'\bcold\s*rolled\b', 'cr'),
+    ]
+
+    @staticmethod
+    def is_sheet(product: Dict) -> bool:
+        return "sheet" in product.get("type", "").lower()
+
+    def _expand_search(self, text: str) -> str:
+        """Normalise shorthand and synonyms in a search term before matching."""
+        t = text
+        for pattern, replacement in self._SHEET_SIZES:
+            t = re.sub(pattern, replacement, t, flags=re.IGNORECASE)
+        for pattern, replacement in self._TERMINOLOGY:
+            t = re.sub(pattern, replacement, t, flags=re.IGNORECASE)
+        return t
+
     def normalize(self, text: str) -> str:
         return re.sub(r"\s+", "", text.lower())
 
@@ -74,6 +102,7 @@ class ProductDatabase:
 
     def find_product(self, search_term: str) -> Optional[Dict]:
         self.load_products()
+        search_term = self._expand_search(search_term)
         sn = self.normalize(search_term)
         ss = search_term.lstrip("0") or "0"
 
@@ -116,6 +145,7 @@ class ProductDatabase:
         Falls back to find_product() when there are fewer than 2 dimensions.
         """
         self.load_products()
+        search_term = self._expand_search(search_term)
         _, s_nums = self._parse_section(search_term)
 
         if len(s_nums) < 2:

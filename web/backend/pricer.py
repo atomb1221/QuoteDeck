@@ -2,13 +2,14 @@
 from typing import Dict
 
 
+def is_sheet(product: Dict) -> bool:
+    return "sheet" in product.get("type", "").lower()
+
+
 def calculate_line_price(product: Dict, length: float, qty: int, tonnage: float) -> float:
-    is_sheet = (
-        product.get("type", "").lower() == "sheet"
-        or "sheet" in product["description"].lower()
-    )
-    if is_sheet:
-        unit_price = (product["weight"] * length * tonnage) / 1000
+    if is_sheet(product):
+        # Sheet: weight is kg per whole sheet, no length factor
+        return (product["weight"] * qty * tonnage) / 1000
     else:
-        unit_price = (product["weight"] * tonnage / 1000) * length
-    return unit_price * qty
+        # Standard: weight is kg/m, length in metres required
+        return (product["weight"] * length * tonnage / 1000) * qty

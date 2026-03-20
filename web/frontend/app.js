@@ -299,10 +299,12 @@ function renderTable(items) {
 
   items.forEach((item, i) => {
     const tr = document.createElement('tr');
+    const isSheet = item.is_sheet || false;
     tr.dataset.index   = i;
     tr.dataset.weight  = item.weight  || 0;
-    tr.dataset.isSheet = item.is_sheet ? 'true' : 'false';
+    tr.dataset.isSheet = isSheet ? 'true' : 'false';
     if (item.ambiguous) tr.classList.add('row-ambiguous');
+    if (isSheet) tr.classList.add('row-sheet');
 
     // Product cell
     let productCell;
@@ -332,12 +334,19 @@ function renderTable(items) {
       productCell = `<td class="col-product">${esc(item.product)}</td>`;
     }
 
+    const weightCell = item.weight
+      ? `${item.weight.toFixed(2)}<span class="weight-unit">${isSheet ? ' kg' : ''}</span>`
+      : '?';
+    const lengthCell = isSheet
+      ? `<td class="td-sheet-size" title="Priced per sheet — no length needed">per sheet</td>`
+      : `<td><input class="cell-input" data-field="length" value="${item.length || ''}" placeholder="m" tabindex="${i * 3 + 2}"></td>`;
+
     tr.innerHTML = `
       <td class="td-num">${i + 1}</td>
       ${productCell}
-      <td class="td-kgm">${item.weight ? item.weight.toFixed(2) : '?'}</td>
+      <td class="td-kgm">${weightCell}</td>
       <td><input class="cell-input" data-field="qty"     value="${item.qty     || 1}"   tabindex="${i * 3 + 1}"></td>
-      <td><input class="cell-input" data-field="length"  value="${item.length  || ''}"  placeholder="m"   tabindex="${i * 3 + 2}"></td>
+      ${lengthCell}
       <td><input class="cell-input" data-field="tonnage" value="${item.tonnage || ''}"  placeholder="£/t" tabindex="${i * 3 + 3}"></td>
       <td class="td-total line-total">—</td>
     `;
@@ -373,14 +382,17 @@ function recalcLine(tr) {
   const weight  = parseFloat(tr.dataset.weight)  || 0;
   const isSheet = tr.dataset.isSheet === 'true';
   const qty     = parseFloat(tr.querySelector('[data-field=qty]').value)     || 0;
-  const length  = parseFloat(tr.querySelector('[data-field=length]').value)  || 0;
   const tonnage = parseFloat(tr.querySelector('[data-field=tonnage]').value) || 0;
 
   let total = 0;
-  if (weight && tonnage && length) {
-    if (isSheet) {
-      total = (weight * length * tonnage / 1000) * qty;
-    } else {
+  if (isSheet) {
+    // Sheet: weight is kg per whole sheet, quantity × tonnage price
+    if (weight && tonnage && qty) {
+      total = (weight * qty * tonnage) / 1000;
+    }
+  } else {
+    const length = parseFloat(tr.querySelector('[data-field=length]').value) || 0;
+    if (weight && tonnage && length) {
       total = (weight * tonnage / 1000) * length * qty;
     }
   }
