@@ -55,8 +55,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
 
-        # Always allow login page, login POST, and static assets
-        if path == "/login" or path.startswith("/static/"):
+        # Always allow login page, login POST, health check, and static assets
+        if path in ("/login", "/health") or path.startswith("/static/"):
             return await call_next(request)
 
         # Check session cookie
@@ -90,6 +90,11 @@ app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 @app.get("/", include_in_schema=False)
 def root():
     return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
+
+
+@app.get("/health", include_in_schema=False)
+def health():
+    return {"ok": True}
 
 
 @app.get("/login", include_in_schema=False)
