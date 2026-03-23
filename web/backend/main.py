@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from .database import ProductDatabase
+from .database import ProductDatabase, load_from_xlsx
 from .pricer import calculate_line_price
 from .db import Database
 from . import parser
@@ -24,21 +24,18 @@ CONFIG_FILE  = os.path.join(ROOT_DIR, "config.json")
 # DATA_DIR: set to Railway volume mount path (e.g. /data) for persistent storage.
 # Falls back to the repo root for local runs.
 _DATA_DIR = os.environ.get("DATA_DIR", ROOT_DIR)
-PRODUCTS_XLS = os.path.join(_DATA_DIR, "products.xlsx")
+PRODUCTS_XLS = os.path.join(ROOT_DIR, "products.xlsx")   # always the repo copy (seed only)
 SQLITE_DB    = os.path.join(_DATA_DIR, "pocketpricer.db")
 
-# On first deploy with a volume, seed products.xlsx from the repo copy
-if _DATA_DIR != ROOT_DIR:
-    import shutil
-    os.makedirs(_DATA_DIR, exist_ok=True)
-    _repo_products = os.path.join(ROOT_DIR, "products.xlsx")
-    if not os.path.exists(PRODUCTS_XLS) and os.path.exists(_repo_products):
-        shutil.copy(_repo_products, PRODUCTS_XLS)
+os.makedirs(_DATA_DIR, exist_ok=True)
 
 # ── Services ───────────────────────────────────────────────────────────────────
-products_db = ProductDatabase(PRODUCTS_XLS)
-db          = Database(SQLITE_DB)
-db.seed_admin_if_empty()   # creates admin/admin on first deploy if no users exist
+db = Database(SQLITE_DB)
+
+# Load the xlsx once at startup — used only to seed the DB for users with no products
+_xlsx_products = load_from_xlsx(PRODUCTS_XLS) if os.path.exists(PRODUCTS_XLS) else []
+
+db.seed_admin_if_empty(_xlsx_products)   # creates admin/admin + seeds products on first deploy
 
 # Load Claude client — env var takes priority (Railway), fallback to config.json (local)
 _claude_client = None
@@ -50,6 +47,12 @@ if not _key and os.path.exists(CONFIG_FILE):
 if _key and not _key.startswith("your-"):
     from anthropic import Anthropic
     _claude_client = Anthropic(api_key=_key)
+
+
+def _products_db(user_id: int) -> ProductDatabase:
+    """Return a matcher loaded with the current user's product list."""
+    return ProductDatabase(db.get_products(user_id))
+
 
 # ── Auth middleware ─────────────────────────────────────────────────────────────
 class AuthMiddleware(BaseHTTPMiddleware):
@@ -175,10 +178,11 @@ class RenameRequest(BaseModel):
 
 # ── Customer endpoints ──────────────────────────────────────────────────────────
 @app.get("/customers")
-def search_customers(search: str = ""):
+def search_customers(request: Request, search: str = ""):
     if not search:
         return {"customers": []}
-    customers = db.search_customers(search)
+    user_id = request.state.user["id"]
+    customers = db.search_customers(search, user_id)
     return {"customers": customers}
 
 
@@ -190,48 +194,53 @@ def get_customer_prices(customer_id: int):
 
 # ── Product endpoints ───────────────────────────────────────────────────────────
 @app.get("/products")
-def get_products():
-    all_p = products_db.get_all()
+def get_products(request: Request):
+    user_id = request.state.user["id"]
+    products = db.get_products(user_id)
+    # Return id as idx so the frontend's existing edit/delete calls work unchanged
     return {
-        "count": len(all_p),
-        "products": [{"idx": i, **p} for i, p in enumerate(all_p)],
+        "count": len(products),
+        "products": [{"idx": p["id"], **p} for p in products],
     }
 
 
 @app.post("/products")
-def create_product(req: ProductRequest):
-    product = products_db.add_product(req.code, req.description, req.weight, req.type)
-    return {"idx": len(products_db.get_all()) - 1, **product}
+def create_product(request: Request, req: ProductRequest):
+    user_id = request.state.user["id"]
+    product = db.add_product(user_id, req.code, req.description, req.weight, req.type)
+    return {"idx": product["id"], **product}
 
 
-@app.put("/products/{idx}")
-def update_product(idx: int, req: ProductRequest):
-    if idx < 0 or idx >= len(products_db.get_all()):
+@app.put("/products/{product_id}")
+def update_product(product_id: int, request: Request, req: ProductRequest):
+    user_id = request.state.user["id"]
+    product = db.update_product(product_id, user_id, req.code, req.description, req.weight, req.type)
+    if not product:
         raise HTTPException(status_code=404, detail="Product not found")
-    product = products_db.update_product(idx, req.code, req.description, req.weight, req.type)
-    return {"idx": idx, **product}
+    return {"idx": product["id"], **product}
 
 
-@app.delete("/products/{idx}")
-def delete_product(idx: int):
-    if idx < 0 or idx >= len(products_db.get_all()):
+@app.delete("/products/{product_id}")
+def delete_product(product_id: int, request: Request):
+    user_id = request.state.user["id"]
+    if not db.delete_product(product_id, user_id):
         raise HTTPException(status_code=404, detail="Product not found")
-    products_db.delete_product(idx)
     return {"ok": True}
 
 
 # ── Quote endpoints ─────────────────────────────────────────────────────────────
 @app.post("/extract")
-def extract(req: ExtractRequest):
+def extract(request: Request, req: ExtractRequest):
     if not _claude_client:
         raise HTTPException(
             status_code=503,
             detail="Claude API key not configured. Add anthropic_api_key to config.json.",
         )
+    user_id   = request.state.user["id"]
+    pdb       = _products_db(user_id)
+
     try:
-        result = parser.extract_items_from_email(
-            req.email_text, products_db.get_all(), _claude_client
-        )
+        result = parser.extract_items_from_email(req.email_text, pdb.products, _claude_client)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -241,7 +250,7 @@ def extract(req: ExtractRequest):
 
     for item in result.get("items", []):
         requested  = item.get("product", "")
-        candidates = products_db.find_all_products(requested)
+        candidates = pdb.find_all_products(requested)
 
         if not candidates:
             enriched.append({**item, "requested": requested, "matched": False,
@@ -250,10 +259,8 @@ def extract(req: ExtractRequest):
             continue
 
         # ── Ambiguity guard: same dims, different types, no type keyword ──────
-        # Use customer's original words (not Claude's normalised output) so that
-        # Claude adding "SHS" to its output doesn't suppress the disambiguation prompt.
         customer_words = item.get("requested_text", requested)
-        hint = products_db.type_hint_from_text(customer_words)
+        hint = pdb.type_hint_from_text(customer_words)
         if len(candidates) > 1 and not hint:
             diff_types = {c.get("type", "").lower() for c in candidates}
             if len(diff_types) > 1:
@@ -269,14 +276,14 @@ def extract(req: ExtractRequest):
 
         # ── Narrow by type hint if multiple candidates remain ─────────────────
         if len(candidates) > 1 and hint:
-            filtered = [c for c in candidates if products_db.product_matches_type_hint(c, hint)]
+            filtered = [c for c in candidates if pdb.product_matches_type_hint(c, hint)]
             if filtered:
                 candidates = filtered
 
         # ── Single match: classify exact vs approximate ───────────────────────
         p  = candidates[0]
-        sn = products_db.normalize(products_db._expand_search(requested))
-        dn = products_db.normalize(products_db._expand_search(p["description"]))
+        sn = pdb.normalize(pdb._expand_search(requested))
+        dn = pdb.normalize(pdb._expand_search(p["description"]))
         match_type = "exact" if sn == dn else "approximate"
 
         enriched.append({**item, "requested": requested,
@@ -296,20 +303,23 @@ def extract(req: ExtractRequest):
 
 
 @app.post("/calculate")
-def calculate(req: CalculateRequest):
-    lines = []
-    grand = 0.0
+def calculate(request: Request, req: CalculateRequest):
+    user_id = request.state.user["id"]
+    pdb     = _products_db(user_id)
+
+    lines      = []
+    grand      = 0.0
     calc_items = []
 
     for item in req.items:
-        product = products_db.find_product(item.product)
+        product = pdb.find_product(item.product)
         if not product:
             lines.append({"product": item.product, "total": None, "error": "Not found"})
             continue
 
         from .pricer import is_sheet as _is_sheet_fn
-        total = calculate_line_price(product, item.length, item.qty, item.tonnage)
-        grand += total
+        total    = calculate_line_price(product, item.length, item.qty, item.tonnage)
+        grand   += total
         is_sheet = _is_sheet_fn(product)
         line = {
             "product":  product["description"],
@@ -329,21 +339,22 @@ def calculate(req: CalculateRequest):
 
     if customer_name and calc_items:
         from datetime import datetime
-        customer    = db.find_or_create_customer(customer_name)
+        customer    = db.find_or_create_customer(customer_name, user_id)
         customer_id = customer["id"]
-        now = datetime.now()
+        now         = datetime.now()
         quote_name  = f"{now.day} {now.strftime('%b %Y')}"
-        db.save_quote(customer_id, quote_name, round(grand, 2), len(calc_items), calc_items)
+        db.save_quote(customer_id, quote_name, round(grand, 2), len(calc_items),
+                      calc_items, user_id=user_id)
 
-        # Keep only last 3 auto-saved quotes per customer (trim older ones)
+        # Keep only last 3 auto-saved quotes per customer
         with db._conn() as conn:
             conn.execute(
-                """DELETE FROM quotes WHERE customer_id = ?
+                """DELETE FROM quotes WHERE customer_id = ? AND user_id = ?
                    AND id NOT IN (
-                       SELECT id FROM quotes WHERE customer_id = ?
+                       SELECT id FROM quotes WHERE customer_id = ? AND user_id = ?
                        ORDER BY created_at DESC LIMIT 3
                    )""",
-                (customer_id, customer_id),
+                (customer_id, user_id, customer_id, user_id),
             )
             conn.commit()
 
@@ -352,19 +363,20 @@ def calculate(req: CalculateRequest):
 
 # ── Saved quotes ────────────────────────────────────────────────────────────────
 @app.get("/quotes")
-def list_quotes():
-    return {"quotes": db.list_quotes()}
+def list_quotes(request: Request):
+    user_id = request.state.user["id"]
+    return {"quotes": db.list_quotes(user_id)}
 
 
 @app.post("/quotes")
-def save_quote(req: SaveQuoteRequest):
+def save_quote(request: Request, req: SaveQuoteRequest):
+    user_id     = request.state.user["id"]
     customer_id = None
     if req.customer_name:
-        customer = db.find_or_create_customer(req.customer_name)
+        customer    = db.find_or_create_customer(req.customer_name, user_id)
         customer_id = customer["id"]
-    quote = db.save_quote(
-        customer_id, req.name, req.total_value, req.items_count, req.quote_data
-    )
+    quote = db.save_quote(customer_id, req.name, req.total_value, req.items_count,
+                          req.quote_data, user_id=user_id)
     return quote
 
 
