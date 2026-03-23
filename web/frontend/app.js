@@ -323,9 +323,10 @@ function renderTable(items) {
   items.forEach((item, i) => {
     const tr = document.createElement('tr');
     const isSheet = item.is_sheet || false;
-    tr.dataset.index   = i;
-    tr.dataset.weight  = item.weight  || 0;
-    tr.dataset.isSheet = isSheet ? 'true' : 'false';
+    tr.dataset.index     = i;
+    tr.dataset.weight    = item.weight  || 0;
+    tr.dataset.isSheet   = isSheet ? 'true' : 'false';
+    tr.dataset.sheetArea = isSheet ? sheetAreaM2(item.product) : 0;
     if (item.ambiguous) tr.classList.add('row-ambiguous');
     if (isSheet) tr.classList.add('row-sheet');
 
@@ -358,7 +359,7 @@ function renderTable(items) {
     }
 
     const weightCell = item.weight
-      ? `${item.weight.toFixed(2)}<span class="weight-unit">${isSheet ? ' kg' : ''}</span>`
+      ? `${item.weight.toFixed(2)}<span class="weight-unit">${isSheet ? ' kg/m²' : ''}</span>`
       : '?';
     const lengthCell = isSheet
       ? `<td class="td-sheet-size" title="Priced per sheet — no length needed">per sheet</td>`
@@ -405,6 +406,15 @@ function renderTable(items) {
   });
 }
 
+// ── Sheet area helper ─────────────────────────────────────────────────────────
+function sheetAreaM2(description) {
+  // First two numbers are sheet dimensions in mm → convert to m²
+  // e.g. '2500 x 1250 x 8mm HR Sheet' → 2.5 × 1.25 = 3.125 m²
+  const nums = (description || '').match(/\d+(?:\.\d+)?/g) || [];
+  if (nums.length >= 2) return (parseFloat(nums[0]) / 1000) * (parseFloat(nums[1]) / 1000);
+  return 1;
+}
+
 // ── Recalculate a single row's line total (client-side) ───────────────────────
 function recalcLine(tr) {
   const weight  = parseFloat(tr.dataset.weight)  || 0;
@@ -414,9 +424,10 @@ function recalcLine(tr) {
 
   let total = 0;
   if (isSheet) {
-    // Sheet: weight is kg per whole sheet, quantity × tonnage price
+    // Sheet: weight is kg/m², multiply by sheet area to get total kg per sheet
+    const area = parseFloat(tr.dataset.sheetArea) || 1;
     if (weight && tonnage && qty) {
-      total = (weight * qty * tonnage) / 1000;
+      total = (weight * area * qty * tonnage) / 1000;
     }
   } else {
     const length = parseFloat(tr.querySelector('[data-field=length]').value) || 0;
