@@ -268,9 +268,33 @@ def extract(req: ExtractRequest):
         # ── Primary path: use Claude's index lookup ───────────────────────────
         if isinstance(idx, int) and 0 <= idx < len(all_products):
             p = all_products[idx]
+
+            # Python-side ambiguity guard — more reliable than trusting Claude.
+            # If the DB has products with the same dimensions but DIFFERENT types,
+            # and the customer's original text has no type keyword → force disambiguation.
+            customer_text = item.get("requested_text", requested)
+            hint = products_db.type_hint_from_text(customer_text)
+            if not hint:
+                dim_siblings = products_db.find_all_products(p["description"])
+                diff_types = {q.get("type", "").lower() for q in dim_siblings}
+                if len(diff_types) > 1:
+                    enriched.append({
+                        **item,
+                        "requested":  customer_text or requested,
+                        "matched":    False,
+                        "not_found":  False,
+                        "ambiguous":  True,
+                        "candidates": [{"description": c["description"], "weight": c["weight"],
+                                        "type": c.get("type", ""), "is_sheet": _is_sheet_fn(c)}
+                                       for c in dim_siblings],
+                        "weight":   0.0,
+                        "is_sheet": False,
+                    })
+                    continue
+
             enriched.append({
                 **item,
-                "requested":  requested,
+                "requested":  customer_text or requested,
                 "product":    p["description"],
                 "weight":     p["weight"],
                 "is_sheet":   _is_sheet_fn(p),

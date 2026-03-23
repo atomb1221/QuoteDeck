@@ -85,6 +85,7 @@ Return ONLY valid JSON, no commentary:
   "customer_name": "company or person name if present, else empty string",
   "items": [
     {{
+      "requested_text": "the customer's original words for this product (e.g. '50 x 50 x 5mm', '6 inch channel')",
       "product_idx": 47,
       "candidate_indices": [],
       "product": "exact description from the database (empty string if ambiguous or not_found)",
@@ -97,7 +98,7 @@ Return ONLY valid JSON, no commentary:
 }}
 
 Ambiguous example — "50 x 50 x 5" (database has angle AND SHS):
-{{"product_idx": null, "candidate_indices": [11, 479], "product": "", "match_type": "ambiguous", "length": 0, "qty": 1, "tonnage": 0}}
+{{"requested_text": "50 x 50 x 5", "product_idx": null, "candidate_indices": [11, 479], "product": "", "match_type": "ambiguous", "length": 0, "qty": 1, "tonnage": 0}}
 """
 
     message = client.messages.create(
