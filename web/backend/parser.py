@@ -1,94 +1,87 @@
 """
 Email parsing via Claude API.
-Claude's job: extract AND normalise to standard steel terminology.
-Python's job: match the normalised description to the product database.
+
+Architecture:
+- Claude receives the FULL product database and the customer email.
+- Claude interprets steel terminology AND picks the best matching product by index.
+- Python uses the returned index to look up the product directly — no string matching needed.
 """
 import re
 import json
 from typing import Dict, List
 
 
+def _build_product_list(products: List[Dict]) -> str:
+    lines = []
+    for i, p in enumerate(products):
+        weight_str = f"{p['weight']:.2f} kg/m"
+        type_str   = f" | {p['type']}" if p.get("type") else ""
+        lines.append(f"#{i}: {p['description']} ({weight_str}{type_str})")
+    return "\n".join(lines)
+
+
 def extract_items_from_email(email_text: str, product_list: List[Dict], client) -> Dict:
-    """Extract and normalise line items from a customer email.
+    """Extract line items from a customer email.
 
-    Claude interprets steel industry terminology and converts to standard forms
-    (e.g. '33mm pipe' -> '33.7 CHS', '6 inch channel' -> '152 x 76 channel').
-    Python then matches the normalised description to the database.
+    Claude receives the full product list and returns the best-matching product
+    index (#) for each item, along with a match_type so the UI can ask the user
+    to confirm approximate matches.
     """
-    prompt = f"""You are a steel industry expert. Extract and NORMALISE product requests from this customer email into standard UK steel stockholder terminology so they can be matched against a product database.
+    db_text = _build_product_list(product_list)
 
-Customer email:
+    prompt = f"""You are a UK steel stockholder's quoting assistant. You have the customer's email AND our complete product database below.
+
+Your job for each product the customer requests:
+1. Understand what they are asking for (interpret slang, imperial sizes, abbreviations)
+2. Scan the ACTUAL product database and find the best matching product
+3. Return that product's INDEX NUMBER (the # before the colon)
+
+PRODUCT DATABASE:
+{db_text}
+
+CUSTOMER EMAIL:
 {email_text}
 
-For each product, extract:
-- product: the NORMALISED steel description (apply all rules below)
-- length: length in metres (e.g. "6 metre" -> 6, "6000mm" -> 6, "20 foot" -> 6.1). Use 0 if not given.
-- qty: quantity number only. Strip prefixes like "3no", "5 off", "x2". Default 1 if not stated.
-- tonnage: price per tonne only if stated with a pound sign (e.g. "850/tonne" -> 850). Use 0 otherwise.
+INTERPRETATION KNOWLEDGE:
+- Round bar / solid round / "dia" → look for "dia", "RB", "round bar" in the database
+- Round pipe / tube / CHS → standard ODs: 21.3, 26.9, 33.7, 42.4, 48.3, 60.3, 76.1, 88.9, 114.3, 139.7, 168.3. "33mm pipe" → find 33.7 OD
+- Channel / channel iron / PFC → "6 inch channel" ≈ 152×76 → look for 150×75 or 152×76 PFC in the database
+- Angle iron = angle. Box iron = SHS. Channel iron = channel/PFC
+- "8x4" or "8 x 4" sheet = 2500×1250. "10x5" sheet = 3000×1500
+- Galvanised = galv. Checker/chequer plate = same thing
+- HR = hot rolled, CR = cold rolled
 
-CRITICAL - DO NOT confuse dimensions with quantities:
-- "50 x 6" is a steel dimension (50mm x 6mm flat bar), NOT qty=50 of "6"
-- "200 x 100 x 10mm" is a dimension, NOT qty=200 of "100 x 10mm"
-- "100 x 50 x 3 RHS" is a dimension, NOT qty=100 of anything
-- Quantity words are: "no", "off", "nr", or a bare "x" immediately before dimensions: "x2 50x50x5 angle" -> qty=2, product="50 x 50 x 5 angle"
-- A line with only dimensions and a steel type and no explicit quantity word means qty=1
+MATCHING RULES:
+- Search the database for the closest product. Near misses are fine — flag them as approximate.
+- For imperial channels (4", 5", 6", 8", 10"), find the nearest metric PFC/channel in the database
+- For "box iron" find SHS with matching dimensions
+- For rounded pipe ODs find the nearest standard CHS
+- If no reasonable match exists at all, return product_idx: null
 
-NORMALISATION RULES for the product field:
+QUANTITY / LENGTH RULES:
+- Strip quantity prefixes: "5no", "10no", "1 off", "x2" at the START → qty field. Never include in product.
+- "50 x 6" is a DIMENSION not qty=50. "200 x 100 x 10" is a DIMENSION not qty=200.
+- length: metres. "6000mm" → 6. "20 foot" → 6.1. 0 if not given.
+- tonnage: only if stated with £ symbol. 0 otherwise.
+- For sheets: length = 0
 
-1. ROUND BAR / SOLID ROUND - normalise to "X dia":
-   - "25mm round bar", "25 dia", "25mm solid round", "25mm RB", "O25" -> "25 dia"
-
-2. ROUND PIPE / TUBE / CHS - map customer's rounded size to nearest standard CHS OD:
-   Standard ODs: 21.3, 26.9, 33.7, 42.4, 48.3, 60.3, 76.1, 88.9, 114.3, 139.7, 168.3
-   - "21mm pipe/tube" -> "21.3 CHS"
-   - "27mm pipe/tube" -> "26.9 CHS"
-   - "33mm pipe/tube/CHS" -> "33.7 CHS"
-   - "42mm pipe/tube" -> "42.4 CHS"
-   - "48mm pipe/tube" -> "48.3 CHS"
-   - "60mm pipe/tube" -> "60.3 CHS"
-   - "76mm pipe/tube" -> "76.1 CHS"
-   - "89mm pipe/tube" -> "88.9 CHS"
-   - "114mm pipe/tube" -> "114.3 CHS"
-   - "140mm pipe/tube" -> "139.7 CHS"
-   - "168mm pipe/tube" -> "168.3 CHS"
-   - Already exact (e.g. "33.7 CHS"): leave unchanged
-
-3. CHANNEL / CHANNEL IRON / PFC - convert imperial to metric:
-   - "4 inch channel", '4" channel' -> "100 x 50 channel"
-   - "5 inch channel" -> "125 x 65 channel"
-   - "6 inch channel", '6" channel' -> "152 x 76 channel"
-   - "8 inch channel" -> "203 x 76 channel"
-   - "10 inch channel" -> "254 x 76 channel"
-   - Already metric: leave unchanged. "Channel iron" = "channel"
-
-4. ANGLE / ANGLE IRON - "angle iron" = "angle". Keep dimensions:
-   - "60x60x6 angle iron" -> "60 x 60 x 6 angle"
-   - "equal angle 60x60x6" -> "60 x 60 x 6 angle"
-
-5. BOX / BOX IRON / SHS - "box iron" or "box" = "SHS":
-   - "100x100x5 box iron" -> "100 x 100 x 5 SHS"
-   - "60x60x4 box" -> "60 x 60 x 4 SHS"
-
-6. RECTANGULAR HOLLOW SECTION / RHS:
-   - "100x50x3 RHS", "100 x 50 x 3 rectangular" -> "100 x 50 x 3 RHS"
-
-7. SHEETS:
-   - "8x4" or "8 x 4" sheet -> "2500 x 1250" sheet
-   - "10x5" or "10 x 5" sheet -> "3000 x 1500" sheet
-   - Sheet products (HR sheet, Galv sheet, Zintec, chequer plate): length = 0
-
-8. GENERAL:
-   - "Galvanised" -> "galv"
-   - "Checker plate" = "chequer plate"
-   - "HR" = Hot Rolled, "CR" = Cold Rolled
-   - Use spaces around x: "100 x 50 x 3" not "100x50x3"
-   - Remove "mm" from dimensions where it is just clutter (e.g. "60 x 60 x 6" not "60mm x 60mm x 6mm")
+MATCH TYPE:
+- "exact": customer's dimensions clearly match the database product
+- "approximate": interpreted/rounded (e.g. 6" channel → 150×75 PFC, 33mm pipe → 33.7 CHS)
+- "not_found": no reasonable match in the database
 
 Return ONLY valid JSON, no commentary:
 {{
-  "customer_name": "company or person name, empty string if not found",
+  "customer_name": "company or person name if present, else empty string",
   "items": [
-    {{"product": "normalised description", "length": 0, "qty": 1, "tonnage": 0}}
+    {{
+      "product_idx": 47,
+      "product": "exact description from the database for that index",
+      "match_type": "exact",
+      "length": 0,
+      "qty": 1,
+      "tonnage": 0
+    }}
   ]
 }}"""
 

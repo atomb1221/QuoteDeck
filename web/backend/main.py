@@ -235,69 +235,71 @@ def extract(req: ExtractRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+    from .pricer import is_sheet as _is_sheet_fn
+
+    all_products = products_db.get_all()
     enriched = []
+
     for item in result.get("items", []):
-        requested  = item["product"]
-        candidates = products_db.find_all_products(requested)
+        requested  = item.get("product", "")
+        idx        = item.get("product_idx")
+        match_type = item.get("match_type", "not_found")
 
-        from .pricer import is_sheet as _is_sheet_fn
-        def _is_sheet(p):
-            return _is_sheet_fn(p)
-
-        if not candidates:
-            # Not in database at all
-            enriched.append({**item, "requested": requested, "matched": False,
-                             "not_found": True, "ambiguous": False,
-                             "weight": 0.0, "is_sheet": False})
-
-        elif len(candidates) == 1:
-            # Unambiguous match — classify as exact or approximate
-            p = candidates[0]
-            sn = products_db.normalize(products_db._expand_search(requested))
-            dn = products_db.normalize(products_db._expand_search(p["description"]))
-            match_type = "exact" if sn == dn else "approximate"
-            enriched.append({**item, "requested": requested,
-                             "product": p["description"], "weight": p["weight"],
-                             "is_sheet": _is_sheet(p), "matched": True,
-                             "match_type": match_type,
-                             "not_found": False, "ambiguous": False})
-
-        else:
-            # Multiple matches — try type-hint auto-resolution first
-            hint = products_db.type_hint_from_text(requested)
-            if hint:
-                filtered = [c for c in candidates
-                            if products_db.product_matches_type_hint(c, hint)]
-                if len(filtered) == 1:
-                    p = filtered[0]
-                    sn = products_db.normalize(products_db._expand_search(requested))
-                    dn = products_db.normalize(products_db._expand_search(p["description"]))
-                    match_type = "exact" if sn == dn else "approximate"
-                    enriched.append({**item, "requested": requested,
-                                     "product": p["description"], "weight": p["weight"],
-                                     "is_sheet": _is_sheet(p), "matched": True,
-                                     "match_type": match_type,
-                                     "not_found": False, "ambiguous": False})
-                    continue
-
-            # Still ambiguous — send candidates to the frontend for the user to choose
+        # ── Primary path: use Claude's index lookup ───────────────────────────
+        if isinstance(idx, int) and 0 <= idx < len(all_products):
+            p = all_products[idx]
             enriched.append({
                 **item,
                 "requested":  requested,
-                "matched":    False,
+                "product":    p["description"],
+                "weight":     p["weight"],
+                "is_sheet":   _is_sheet_fn(p),
+                "matched":    True,
+                "match_type": match_type,
                 "not_found":  False,
-                "ambiguous":  True,
-                "candidates": [{"description": c["description"],
-                                "weight": c["weight"],
-                                "type": c.get("type", ""),
-                                "is_sheet": _is_sheet(c)}
-                               for c in candidates],
-                "weight":   0.0,
-                "is_sheet": False,
+                "ambiguous":  False,
             })
+            continue
+
+        # ── Fallback: Python string matching (Claude returned null/invalid) ───
+        candidates = products_db.find_all_products(requested)
+
+        if not candidates:
+            enriched.append({**item, "requested": requested, "matched": False,
+                             "not_found": True, "match_type": "not_found",
+                             "ambiguous": False, "weight": 0.0, "is_sheet": False})
+
+        elif len(candidates) == 1:
+            p = candidates[0]
+            enriched.append({**item, "requested": requested,
+                             "product": p["description"], "weight": p["weight"],
+                             "is_sheet": _is_sheet_fn(p), "matched": True,
+                             "match_type": "approximate",
+                             "not_found": False, "ambiguous": False})
+
+        else:
+            hint     = products_db.type_hint_from_text(requested)
+            filtered = ([c for c in candidates if products_db.product_matches_type_hint(c, hint)]
+                        if hint else [])
+            if len(filtered) == 1:
+                p = filtered[0]
+                enriched.append({**item, "requested": requested,
+                                 "product": p["description"], "weight": p["weight"],
+                                 "is_sheet": _is_sheet_fn(p), "matched": True,
+                                 "match_type": "approximate",
+                                 "not_found": False, "ambiguous": False})
+            else:
+                enriched.append({
+                    **item, "requested": requested,
+                    "matched": False, "not_found": False, "ambiguous": True,
+                    "candidates": [{"description": c["description"], "weight": c["weight"],
+                                    "type": c.get("type", ""), "is_sheet": _is_sheet_fn(c)}
+                                   for c in candidates],
+                    "weight": 0.0, "is_sheet": False,
+                })
 
     not_found = [e["requested"] for e in enriched if e.get("not_found")]
-    ambiguous  = [e["requested"] for e in enriched if e.get("ambiguous")]
+    ambiguous = [e["requested"] for e in enriched if e.get("ambiguous")]
     return {
         "customer_name": result.get("customer_name", ""),
         "items":         enriched,
