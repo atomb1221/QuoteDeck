@@ -48,15 +48,21 @@ class ProductDatabase:
         (r'\b10\s*[x×]\s*5\b',  '3000 x 1500'),
     ]
 
-    # Common terminology synonyms
+    # Common terminology synonyms (applied to search terms before matching)
     _TERMINOLOGY = [
-        (r'\bgalvanised\b',  'galv'),   # normalise to shorter form first
-        (r'\bchequer\b',     'chequer'),
-        (r'\bchecker\b',     'chequer'),
-        (r'\bhot\s*rolled\b', 'hr'),
-        (r'\bcold\s*rolled\b', 'cr'),
-        (r'\bround\s+bar\b', 'rb'),     # "round bar" → "rb" for type matching
-        (r'\bflat\s+bar\b',  'fb'),     # "flat bar"  → "fb" for type matching
+        (r'\bgalvanised\b',       'galv'),
+        (r'\bchecker\b',          'chequer'),
+        (r'\bhot\s*rolled\b',     'hr'),
+        (r'\bcold\s*rolled\b',    'cr'),
+        # type synonyms
+        (r'\bround\s+bar\b',      'dia'),
+        (r'\bsolid\s+round\b',    'dia'),
+        (r'\bflat\s+bar\b',       'fb'),
+        (r'\bangle\s+iron\b',     'angle'),
+        (r'\bbox\s+iron\b',       'SHS'),
+        (r'\bchannel\s+iron\b',   'channel'),
+        (r'\bround\s+pipe\b',     'CHS'),
+        (r'\bround\s+tube\b',     'CHS'),
     ]
 
     @staticmethod
