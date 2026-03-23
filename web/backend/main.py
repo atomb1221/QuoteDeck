@@ -250,7 +250,10 @@ def extract(req: ExtractRequest):
             continue
 
         # ── Ambiguity guard: same dims, different types, no type keyword ──────
-        hint = products_db.type_hint_from_text(requested)
+        # Use customer's original words (not Claude's normalised output) so that
+        # Claude adding "SHS" to its output doesn't suppress the disambiguation prompt.
+        customer_words = item.get("requested_text", requested)
+        hint = products_db.type_hint_from_text(customer_words)
         if len(candidates) > 1 and not hint:
             diff_types = {c.get("type", "").lower() for c in candidates}
             if len(diff_types) > 1:

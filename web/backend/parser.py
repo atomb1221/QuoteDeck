@@ -47,7 +47,13 @@ Return ONLY valid JSON:
 {{
   "customer_name": "name if present else empty string",
   "items": [
-    {{"product": "normalised description", "length": 0, "qty": 1, "tonnage": 0}}
+    {{
+      "requested_text": "customer's EXACT words for this product BEFORE normalisation (e.g. '50 x 50 x 5mm', '6 inch channel')",
+      "product": "normalised description",
+      "length": 0,
+      "qty": 1,
+      "tonnage": 0
+    }}
   ]
 }}"""
 

@@ -422,6 +422,25 @@ function renderTable(items) {
 
     tr.querySelectorAll('.cell-input').forEach(input => {
       input.addEventListener('input', () => recalcLine(tr));
+      input.addEventListener('keydown', e => {
+        const field = input.dataset.field;
+        if (!['length', 'tonnage'].includes(field)) return;
+        const rows = [...document.querySelectorAll('#items-tbody tr[data-index]')];
+        const rowIdx = rows.indexOf(tr);
+        if (e.key === 'ArrowDown' && rowIdx < rows.length - 1) {
+          e.preventDefault();
+          rows[rowIdx + 1].querySelector(`[data-field="${field}"]`)?.focus();
+        } else if (e.key === 'ArrowUp' && rowIdx > 0) {
+          e.preventDefault();
+          rows[rowIdx - 1].querySelector(`[data-field="${field}"]`)?.focus();
+        } else if (e.key === 'ArrowRight' && field === 'length') {
+          e.preventDefault();
+          tr.querySelector('[data-field="tonnage"]')?.focus();
+        } else if (e.key === 'ArrowLeft' && field === 'tonnage') {
+          e.preventDefault();
+          tr.querySelector('[data-field="length"]')?.focus();
+        }
+      });
     });
 
     tbody.appendChild(tr);
