@@ -280,16 +280,11 @@ def extract(request: Request, req: ExtractRequest):
             if filtered:
                 candidates = filtered
 
-        # ── Single match: classify exact vs approximate ───────────────────────
-        p  = candidates[0]
-        sn = pdb.normalize(pdb._expand_search(requested))
-        dn = pdb.normalize(pdb._expand_search(p["description"]))
-        match_type = "exact" if sn == dn else "approximate"
-
+        # ── Single match ──────────────────────────────────────────────────────
+        p = candidates[0]
         enriched.append({**item, "requested": requested,
                          "product": p["description"], "weight": p["weight"],
                          "is_sheet": _is_sheet_fn(p), "matched": True,
-                         "match_type": match_type,
                          "not_found": False, "ambiguous": False})
 
     not_found = [e["requested"] for e in enriched if e.get("not_found")]
