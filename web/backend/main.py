@@ -251,11 +251,15 @@ def extract(req: ExtractRequest):
                              "weight": 0.0, "is_sheet": False})
 
         elif len(candidates) == 1:
-            # Unambiguous match
+            # Unambiguous match — classify as exact or approximate
             p = candidates[0]
+            sn = products_db.normalize(products_db._expand_search(requested))
+            dn = products_db.normalize(products_db._expand_search(p["description"]))
+            match_type = "exact" if sn == dn else "approximate"
             enriched.append({**item, "requested": requested,
                              "product": p["description"], "weight": p["weight"],
                              "is_sheet": _is_sheet(p), "matched": True,
+                             "match_type": match_type,
                              "not_found": False, "ambiguous": False})
 
         else:
@@ -266,9 +270,13 @@ def extract(req: ExtractRequest):
                             if products_db.product_matches_type_hint(c, hint)]
                 if len(filtered) == 1:
                     p = filtered[0]
+                    sn = products_db.normalize(products_db._expand_search(requested))
+                    dn = products_db.normalize(products_db._expand_search(p["description"]))
+                    match_type = "exact" if sn == dn else "approximate"
                     enriched.append({**item, "requested": requested,
                                      "product": p["description"], "weight": p["weight"],
                                      "is_sheet": _is_sheet(p), "matched": True,
+                                     "match_type": match_type,
                                      "not_found": False, "ambiguous": False})
                     continue
 

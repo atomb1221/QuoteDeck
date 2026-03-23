@@ -329,6 +329,8 @@ function renderTable(items) {
     tr.dataset.sheetArea = isSheet ? sheetAreaM2(item.product) : 0;
     if (item.ambiguous) tr.classList.add('row-ambiguous');
     if (isSheet) tr.classList.add('row-sheet');
+    const isApprox = item.match_type === 'approximate' && !item.confirmed;
+    if (isApprox) tr.classList.add('row-approx');
 
     // Product cell
     let productCell;
@@ -352,6 +354,19 @@ function renderTable(items) {
         <td class="col-product not-found-cell">
           <span class="not-found-badge">NOT FOUND</span>
           <span class="not-found-text" title="Add this product via the Products tab">${esc(item.requested || item.product)}</span>
+        </td>`;
+    } else if (isApprox) {
+      // Approximate match — needs user confirmation
+      productCell = `
+        <td class="col-product approx-product-cell">
+          <div class="approx-cell">
+            <span class="approx-badge" title="Interpreted match — please confirm">≈</span>
+            <span class="approx-desc">${esc(item.product)}</span>
+            <div class="approx-btns">
+              <button class="btn-approx-yes">✓ Yes</button>
+              <button class="btn-approx-no">✗ No</button>
+            </div>
+          </div>
         </td>`;
     } else {
       // Matched — show exact DB description
@@ -390,6 +405,15 @@ function renderTable(items) {
         renderTable(extractedItems);
       });
     }
+
+    // Approximate match — confirm (Yes) or search replacement (No)
+    const yesBtn = tr.querySelector('.btn-approx-yes');
+    const noBtn  = tr.querySelector('.btn-approx-no');
+    if (yesBtn) yesBtn.addEventListener('click', () => {
+      extractedItems[i].confirmed = true;
+      renderTable(extractedItems);
+    });
+    if (noBtn) noBtn.addEventListener('click', () => showProductSearch(tr, i));
 
     tr.querySelector('.btn-remove').addEventListener('click', () => {
       extractedItems.splice(i, 1);
@@ -440,10 +464,64 @@ function recalcLine(tr) {
   cell.textContent = total > 0 ? `£${total.toFixed(2)}` : '—';
 }
 
+// ── Inline product search (for approximate match rejection) ───────────────────
+async function showProductSearch(tr, itemIndex) {
+  if (!allProducts.length) {
+    const res = await fetch('/products');
+    allProducts = (await res.json()).products || [];
+  }
+  const td = tr.querySelector('.approx-product-cell');
+  td.innerHTML = `
+    <div class="approx-search-wrap">
+      <input class="approx-search-input" placeholder="Search products…" autocomplete="off">
+      <div class="approx-search-results"></div>
+    </div>`;
+  const input   = td.querySelector('.approx-search-input');
+  const results = td.querySelector('.approx-search-results');
+  let matches   = [];
+  input.focus();
+  input.addEventListener('input', () => {
+    const q = input.value.toLowerCase().trim();
+    if (!q) { results.style.display = 'none'; return; }
+    matches = allProducts
+      .filter(p => p.description.toLowerCase().includes(q) || (p.code || '').toLowerCase().includes(q))
+      .slice(0, 12);
+    if (!matches.length) { results.style.display = 'none'; return; }
+    results.innerHTML = matches.map((p, mi) =>
+      `<div class="approx-result-item" data-mi="${mi}">
+        <span class="approx-result-desc">${esc(p.description)}</span>
+        <span class="approx-result-weight">${p.weight.toFixed(2)} kg/m</span>
+      </div>`
+    ).join('');
+    results.style.display = 'block';
+  });
+  results.addEventListener('click', e => {
+    const row = e.target.closest('.approx-result-item');
+    if (!row) return;
+    const p = matches[parseInt(row.dataset.mi)];
+    const isSheet = (p.type || '').toLowerCase().includes('sheet');
+    extractedItems[itemIndex] = {
+      ...extractedItems[itemIndex],
+      product: p.description, weight: p.weight,
+      is_sheet: isSheet, match_type: 'exact',
+      confirmed: true, matched: true, not_found: false, ambiguous: false,
+    };
+    renderTable(extractedItems);
+  });
+}
+
 // ── Calculate Quote ───────────────────────────────────────────────────────────
 async function calculateQuote() {
   const rows = document.querySelectorAll('#items-tbody tr[data-index]');
   if (!rows.length) { toast('Extract items first.'); return; }
+
+  const unconfirmed = extractedItems.filter(
+    item => item.match_type === 'approximate' && !item.confirmed
+  );
+  if (unconfirmed.length) {
+    toast(`Confirm ${unconfirmed.length} approximate match${unconfirmed.length > 1 ? 'es' : ''} first.`);
+    return;
+  }
 
   const customerName = document.getElementById('customer-input').value.trim();
   const fillTonnage  = parseFloat(document.getElementById('fill-tonnage').value) || 0;

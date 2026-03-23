@@ -525,6 +525,83 @@ tr:hover .btn-remove { display: block; }
 }
 .not-found-text { color: var(--text-muted); font-style: italic; }
 
+/* Approximate match rows */
+.row-approx                   { background: #FFFBEB !important; }
+.row-approx:hover             { background: #FEF3C7 !important; }
+
+.approx-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+.approx-badge {
+  color: #D97706;
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.approx-desc { font-size: 12px; color: var(--text); flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.approx-btns { display: flex; gap: 4px; flex-shrink: 0; }
+
+.btn-approx-yes, .btn-approx-no {
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 600;
+  height: 22px;
+  padding: 0 8px;
+  white-space: nowrap;
+}
+.btn-approx-yes { background: #D1FAE5; color: #065F46; border: 1px solid #6EE7B7; }
+.btn-approx-yes:hover { background: #A7F3D0; }
+.btn-approx-no  { background: #FEE2E2; color: #991B1B; border: 1px solid #FCA5A5; }
+.btn-approx-no:hover  { background: #FECACA; }
+
+/* Inline product search (No path) */
+.approx-search-wrap { position: relative; width: 100%; }
+.approx-search-input {
+  background: var(--accent-dim);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 12px;
+  height: 26px;
+  outline: none;
+  padding: 0 8px;
+  width: 100%;
+}
+.approx-search-results {
+  display: none;
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 300;
+}
+.approx-result-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  gap: 8px;
+  border-bottom: 1px solid var(--border-sub);
+}
+.approx-result-item:last-child { border-bottom: none; }
+.approx-result-item:hover { background: var(--accent-dim); }
+.approx-result-desc   { color: var(--text); }
+.approx-result-weight { color: var(--text-muted); font-family: var(--font-num); font-size: 11px; flex-shrink: 0; }
+
 /* Ambiguous rows */
 .row-ambiguous                { background: #FFFBEB !important; }
 .row-ambiguous:hover          { background: #FEF3C7 !important; }
