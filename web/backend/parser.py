@@ -54,13 +54,18 @@ INTERPRETATION KNOWLEDGE:
 MATCHING RULES:
 - Search the database for the closest product. Near misses are fine — flag them as approximate.
 - For imperial channels (4", 5", 6", 8", 10"), find the nearest metric PFC/channel in the database
-- For "box iron" find SHS with matching dimensions
 - For rounded pipe ODs find the nearest standard CHS
-- SHEETS: the thickness/gauge is a critical part of the spec and MUST be matched.
+- SHEETS: the thickness/gauge is critical and MUST be matched.
   "8 x 4 x 3mm sheet" = 2500 x 1250 x 3mm — do NOT return a 1.6mm or 6mm version.
-  Search for the product with matching sheet size AND matching thickness.
-  If the exact thickness is not stocked, pick the closest and flag as approximate.
+  If exact thickness not stocked, pick closest and flag as approximate.
 - If no reasonable match exists at all, return product_idx: null
+
+AMBIGUOUS TYPE — THIS IS CRITICAL:
+If the customer does NOT explicitly state a product type (e.g. just "50 x 50 x 5" with no "angle", "SHS", "box", "RHS", "channel" etc.) AND the database contains multiple products with those same dimensions but DIFFERENT types (e.g. one angle and one SHS/box), you MUST return match_type: "ambiguous" and list ALL matching indices in candidate_indices.
+DO NOT guess between angle and SHS/box — the user must choose.
+DO NOT pick angle just because it appears first in the list.
+Examples that are ambiguous (no type stated): "50 x 50 x 5", "40 x 40 x 4mm", "100 x 100 x 6"
+Examples that are NOT ambiguous (type stated): "50 x 50 x 5 angle", "100 x 100 x 6 SHS", "box iron 60 x 60 x 4"
 
 QUANTITY / LENGTH RULES:
 - Strip quantity prefixes: "5no", "10no", "1 off", "x2" at the START → qty field. Never include in product.
@@ -72,6 +77,7 @@ QUANTITY / LENGTH RULES:
 MATCH TYPE:
 - "exact": customer's dimensions clearly match the database product
 - "approximate": interpreted/rounded (e.g. 6" channel → 150×75 PFC, 33mm pipe → 33.7 CHS)
+- "ambiguous": same dimensions exist under MULTIPLE types and customer did NOT specify — use candidate_indices, set product_idx to null
 - "not_found": no reasonable match in the database
 
 Return ONLY valid JSON, no commentary:
@@ -80,14 +86,19 @@ Return ONLY valid JSON, no commentary:
   "items": [
     {{
       "product_idx": 47,
-      "product": "exact description from the database for that index",
+      "candidate_indices": [],
+      "product": "exact description from the database (empty string if ambiguous or not_found)",
       "match_type": "exact",
       "length": 0,
       "qty": 1,
       "tonnage": 0
     }}
   ]
-}}"""
+}}
+
+Ambiguous example — "50 x 50 x 5" (database has angle AND SHS):
+{{"product_idx": null, "candidate_indices": [11, 479], "product": "", "match_type": "ambiguous", "length": 0, "qty": 1, "tonnage": 0}}
+"""
 
     message = client.messages.create(
         model="claude-3-haiku-20240307",

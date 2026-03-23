@@ -245,6 +245,26 @@ def extract(req: ExtractRequest):
         idx        = item.get("product_idx")
         match_type = item.get("match_type", "not_found")
 
+        # ── Primary path: ambiguous (Claude found multiple types for same dims) ─
+        candidate_indices = item.get("candidate_indices") or []
+        if match_type == "ambiguous" and candidate_indices:
+            candidates = [all_products[i] for i in candidate_indices
+                          if isinstance(i, int) and 0 <= i < len(all_products)]
+            if candidates:
+                enriched.append({
+                    **item,
+                    "requested":  requested,
+                    "matched":    False,
+                    "not_found":  False,
+                    "ambiguous":  True,
+                    "candidates": [{"description": c["description"], "weight": c["weight"],
+                                    "type": c.get("type", ""), "is_sheet": _is_sheet_fn(c)}
+                                   for c in candidates],
+                    "weight":   0.0,
+                    "is_sheet": False,
+                })
+                continue
+
         # ── Primary path: use Claude's index lookup ───────────────────────────
         if isinstance(idx, int) and 0 <= idx < len(all_products):
             p = all_products[idx]
