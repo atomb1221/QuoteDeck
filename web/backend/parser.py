@@ -47,7 +47,7 @@ INTERPRETATION KNOWLEDGE:
 - Round pipe / tube / CHS → standard ODs: 21.3, 26.9, 33.7, 42.4, 48.3, 60.3, 76.1, 88.9, 114.3, 139.7, 168.3. "33mm pipe" → find 33.7 OD
 - Channel / channel iron / PFC → "6 inch channel" ≈ 152×76 → look for 150×75 or 152×76 PFC in the database
 - Angle iron = angle. Box iron = SHS. Channel iron = channel/PFC
-- "8x4" or "8 x 4" sheet = 2500×1250. "10x5" sheet = 3000×1500
+- "8x4" or "8 x 4" sheet = 2500×1250mm. "10x5" sheet = 3000×1500mm
 - Galvanised = galv. Checker/chequer plate = same thing
 - HR = hot rolled, CR = cold rolled
 
@@ -56,6 +56,10 @@ MATCHING RULES:
 - For imperial channels (4", 5", 6", 8", 10"), find the nearest metric PFC/channel in the database
 - For "box iron" find SHS with matching dimensions
 - For rounded pipe ODs find the nearest standard CHS
+- SHEETS: the thickness/gauge is a critical part of the spec and MUST be matched.
+  "8 x 4 x 3mm sheet" = 2500 x 1250 x 3mm — do NOT return a 1.6mm or 6mm version.
+  Search for the product with matching sheet size AND matching thickness.
+  If the exact thickness is not stocked, pick the closest and flag as approximate.
 - If no reasonable match exists at all, return product_idx: null
 
 QUANTITY / LENGTH RULES:
