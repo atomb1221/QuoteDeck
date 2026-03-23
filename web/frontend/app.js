@@ -378,15 +378,15 @@ function renderTable(items) {
       : '?';
     const lengthCell = isSheet
       ? `<td class="td-sheet-size" title="Priced per sheet — no length needed">per sheet</td>`
-      : `<td><input class="cell-input" data-field="length" value="${item.length || ''}" placeholder="m" tabindex="${i * 3 + 2}"></td>`;
+      : `<td><input class="cell-input" data-field="length" data-row="${i}" value="${item.length || ''}" placeholder="m" tabindex="${i * 3 + 2}"></td>`;
 
     tr.innerHTML = `
       <td class="td-num"><span class="row-num">${i + 1}</span><button class="btn-remove" title="Remove row">−</button></td>
       ${productCell}
       <td class="td-kgm">${weightCell}</td>
-      <td><input class="cell-input" data-field="qty"     value="${item.qty     || 1}"   tabindex="${i * 3 + 1}"></td>
+      <td><input class="cell-input" data-field="qty" data-row="${i}"     value="${item.qty     || 1}"   tabindex="${i * 3 + 1}"></td>
       ${lengthCell}
-      <td><input class="cell-input" data-field="tonnage" value="${item.tonnage || ''}"  placeholder="£/t" tabindex="${i * 3 + 3}"></td>
+      <td><input class="cell-input" data-field="tonnage" data-row="${i}" value="${item.tonnage || ''}"  placeholder="£/t" tabindex="${i * 3 + 3}"></td>
       <td class="td-total line-total">—</td>
     `;
 
@@ -423,22 +423,22 @@ function renderTable(items) {
     tr.querySelectorAll('.cell-input').forEach(input => {
       input.addEventListener('input', () => recalcLine(tr));
       input.addEventListener('keydown', e => {
-        const field = input.dataset.field;
-        if (!['length', 'tonnage'].includes(field)) return;
-        const rows = [...document.querySelectorAll('#items-tbody tr[data-index]')];
-        const rowIdx = rows.indexOf(tr);
-        if (e.key === 'ArrowDown' && rowIdx < rows.length - 1) {
+        const col = input.dataset.field;
+        const row = parseInt(input.dataset.row);
+        console.log(`Key pressed: ${e.key} | row=${row} col=${col}`);
+        if (!['length', 'tonnage'].includes(col)) return;
+        if (e.key === 'ArrowDown') {
           e.preventDefault();
-          rows[rowIdx + 1].querySelector(`[data-field="${field}"]`)?.focus();
-        } else if (e.key === 'ArrowUp' && rowIdx > 0) {
+          document.querySelector(`.cell-input[data-field="${col}"][data-row="${row + 1}"]`)?.focus();
+        } else if (e.key === 'ArrowUp' && row > 0) {
           e.preventDefault();
-          rows[rowIdx - 1].querySelector(`[data-field="${field}"]`)?.focus();
-        } else if (e.key === 'ArrowRight' && field === 'length') {
+          document.querySelector(`.cell-input[data-field="${col}"][data-row="${row - 1}"]`)?.focus();
+        } else if (e.key === 'ArrowRight' && col === 'length') {
           e.preventDefault();
-          tr.querySelector('[data-field="tonnage"]')?.focus();
-        } else if (e.key === 'ArrowLeft' && field === 'tonnage') {
+          document.querySelector(`.cell-input[data-field="tonnage"][data-row="${row}"]`)?.focus();
+        } else if (e.key === 'ArrowLeft' && col === 'tonnage') {
           e.preventDefault();
-          tr.querySelector('[data-field="length"]')?.focus();
+          document.querySelector(`.cell-input[data-field="length"][data-row="${row}"]`)?.focus();
         }
       });
     });
