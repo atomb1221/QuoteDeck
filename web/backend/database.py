@@ -153,11 +153,32 @@ class ProductDatabase:
 
         return None
 
-    def find_all_products(self, search_term: str) -> List[Dict]:
-        """Return every DB product that shares the same numeric dimensions.
+    @staticmethod
+    def _dims_match(s_nums: tuple, p_nums: tuple, tol: float = 0.05) -> bool:
+        """True if s_nums matches the start of p_nums within a percentage tolerance.
 
-        Used to detect ambiguity (e.g. SHS vs Equal Angle with same dimensions).
-        Falls back to find_product() when there are fewer than 2 dimensions.
+        Prefix match: "152 x 76" (s) matches "150 x 75 x 18kg PFC" (p).
+        Fuzzy tolerance: handles imperial-to-metric rounding (152 ≈ 150, 76 ≈ 75).
+        Exact match: "50 x 50 x 5" must NOT match "50 x 50 x 2.5" (50% off > tol).
+        """
+        if not s_nums or not p_nums:
+            return False
+        if len(s_nums) > len(p_nums):
+            return False
+        for s, p in zip(s_nums, p_nums):
+            denom = max(s, p, 0.001)
+            if abs(s - p) / denom > tol:
+                return False
+        return True
+
+    def find_all_products(self, search_term: str) -> List[Dict]:
+        """Return every DB product whose dimensions match the search term.
+
+        Uses prefix + fuzzy matching so:
+        - "152 x 76 channel" finds "150 x 75 x 18kg PFC"  (within ~5%)
+        - "2500 x 1250" finds "2500 x 1250 x 3mm HR Sheet" (prefix)
+        - "50 x 50 x 5" finds angle AND SHS but NOT 50x50x2.5 (exact wall)
+        Falls back to find_product() for single-dimension searches.
         """
         self.load_products()
         search_term = self._expand_search(search_term)
@@ -171,7 +192,7 @@ class ProductDatabase:
         seen = set()
         for p in self.products:
             _, p_nums = self._parse_section(p["description"])
-            if p_nums == s_nums:
+            if self._dims_match(s_nums, p_nums):
                 key = self.normalize(p["description"])
                 if key not in seen:
                     seen.add(key)

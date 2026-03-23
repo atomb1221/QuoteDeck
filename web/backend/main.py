@@ -237,102 +237,23 @@ def extract(req: ExtractRequest):
 
     from .pricer import is_sheet as _is_sheet_fn
 
-    all_products = products_db.get_all()
     enriched = []
 
     for item in result.get("items", []):
         requested  = item.get("product", "")
-        idx        = item.get("product_idx")
-        match_type = item.get("match_type", "not_found")
-
-        # ── Primary path: ambiguous (Claude found multiple types for same dims) ─
-        candidate_indices = item.get("candidate_indices") or []
-        if match_type == "ambiguous" and candidate_indices:
-            candidates = [all_products[i] for i in candidate_indices
-                          if isinstance(i, int) and 0 <= i < len(all_products)]
-            if candidates:
-                enriched.append({
-                    **item,
-                    "requested":  requested,
-                    "matched":    False,
-                    "not_found":  False,
-                    "ambiguous":  True,
-                    "candidates": [{"description": c["description"], "weight": c["weight"],
-                                    "type": c.get("type", ""), "is_sheet": _is_sheet_fn(c)}
-                                   for c in candidates],
-                    "weight":   0.0,
-                    "is_sheet": False,
-                })
-                continue
-
-        # ── Primary path: use Claude's index lookup ───────────────────────────
-        if isinstance(idx, int) and 0 <= idx < len(all_products):
-            p = all_products[idx]
-
-            # Python-side ambiguity guard — more reliable than trusting Claude.
-            # If the DB has products with the same dimensions but DIFFERENT types,
-            # and the customer's original text has no type keyword → force disambiguation.
-            customer_text = item.get("requested_text", requested)
-            hint = products_db.type_hint_from_text(customer_text)
-            if not hint:
-                dim_siblings = products_db.find_all_products(p["description"])
-                diff_types = {q.get("type", "").lower() for q in dim_siblings}
-                if len(diff_types) > 1:
-                    enriched.append({
-                        **item,
-                        "requested":  customer_text or requested,
-                        "matched":    False,
-                        "not_found":  False,
-                        "ambiguous":  True,
-                        "candidates": [{"description": c["description"], "weight": c["weight"],
-                                        "type": c.get("type", ""), "is_sheet": _is_sheet_fn(c)}
-                                       for c in dim_siblings],
-                        "weight":   0.0,
-                        "is_sheet": False,
-                    })
-                    continue
-
-            enriched.append({
-                **item,
-                "requested":  customer_text or requested,
-                "product":    p["description"],
-                "weight":     p["weight"],
-                "is_sheet":   _is_sheet_fn(p),
-                "matched":    True,
-                "match_type": match_type,
-                "not_found":  False,
-                "ambiguous":  False,
-            })
-            continue
-
-        # ── Fallback: Python string matching (Claude returned null/invalid) ───
         candidates = products_db.find_all_products(requested)
 
         if not candidates:
             enriched.append({**item, "requested": requested, "matched": False,
-                             "not_found": True, "match_type": "not_found",
-                             "ambiguous": False, "weight": 0.0, "is_sheet": False})
+                             "not_found": True, "ambiguous": False,
+                             "weight": 0.0, "is_sheet": False})
+            continue
 
-        elif len(candidates) == 1:
-            p = candidates[0]
-            enriched.append({**item, "requested": requested,
-                             "product": p["description"], "weight": p["weight"],
-                             "is_sheet": _is_sheet_fn(p), "matched": True,
-                             "match_type": "approximate",
-                             "not_found": False, "ambiguous": False})
-
-        else:
-            hint     = products_db.type_hint_from_text(requested)
-            filtered = ([c for c in candidates if products_db.product_matches_type_hint(c, hint)]
-                        if hint else [])
-            if len(filtered) == 1:
-                p = filtered[0]
-                enriched.append({**item, "requested": requested,
-                                 "product": p["description"], "weight": p["weight"],
-                                 "is_sheet": _is_sheet_fn(p), "matched": True,
-                                 "match_type": "approximate",
-                                 "not_found": False, "ambiguous": False})
-            else:
+        # ── Ambiguity guard: same dims, different types, no type keyword ──────
+        hint = products_db.type_hint_from_text(requested)
+        if len(candidates) > 1 and not hint:
+            diff_types = {c.get("type", "").lower() for c in candidates}
+            if len(diff_types) > 1:
                 enriched.append({
                     **item, "requested": requested,
                     "matched": False, "not_found": False, "ambiguous": True,
@@ -341,6 +262,25 @@ def extract(req: ExtractRequest):
                                    for c in candidates],
                     "weight": 0.0, "is_sheet": False,
                 })
+                continue
+
+        # ── Narrow by type hint if multiple candidates remain ─────────────────
+        if len(candidates) > 1 and hint:
+            filtered = [c for c in candidates if products_db.product_matches_type_hint(c, hint)]
+            if filtered:
+                candidates = filtered
+
+        # ── Single match: classify exact vs approximate ───────────────────────
+        p  = candidates[0]
+        sn = products_db.normalize(products_db._expand_search(requested))
+        dn = products_db.normalize(products_db._expand_search(p["description"]))
+        match_type = "exact" if sn == dn else "approximate"
+
+        enriched.append({**item, "requested": requested,
+                         "product": p["description"], "weight": p["weight"],
+                         "is_sheet": _is_sheet_fn(p), "matched": True,
+                         "match_type": match_type,
+                         "not_found": False, "ambiguous": False})
 
     not_found = [e["requested"] for e in enriched if e.get("not_found")]
     ambiguous = [e["requested"] for e in enriched if e.get("ambiguous")]
