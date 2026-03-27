@@ -72,29 +72,26 @@ body {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.04em;
-  color: var(--accent);
-  background: rgba(37,99,235,0.12);
-  border: 1px solid rgba(37,99,235,0.3);
+  color: rgba(255,255,255,0.85);
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.35);
   border-radius: 4px;
   padding: 1px 5px;
   vertical-align: top;
   margin-top: 2px;
-  margin-right: 28px;
+  margin-left: 6px;
 }
 
+/* Login: badge sits over the logo without affecting flow or centring */
 .login-brand {
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 6px;
-  margin-bottom: 28px;
+  position: relative;
+  display: inline-block;
 }
-.login-brand .login-logo { margin-bottom: 0; }
 .login-brand .beta-badge {
-  color: rgba(255,255,255,0.7);
-  background: rgba(255,255,255,0.15);
-  border-color: rgba(255,255,255,0.3);
-  margin-right: 0;
+  position: absolute;
+  top: 0;
+  right: -38px;
+  margin: 0;
 }
 
 .brand-logo {
