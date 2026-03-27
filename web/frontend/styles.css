@@ -69,36 +69,42 @@ body {
   letter-spacing: 0.02em;
 }
 .beta-badge {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  color: rgba(255,255,255,0.85);
-  background: rgba(255,255,255,0.15);
-  border: 1px solid rgba(255,255,255,0.35);
-  border-radius: 4px;
-  padding: 1px 5px;
-  vertical-align: top;
-  margin-top: 2px;
-  margin-left: 6px;
+  letter-spacing: 0.05em;
+  color: #fff;
+  background: rgba(255,255,255,0.2);
+  border: 1px solid rgba(255,255,255,0.4);
+  border-radius: 3px;
+  padding: 1px 4px;
+  position: absolute;
+  top: -4px;
+  right: -30px;
+  line-height: 1.4;
 }
 
-/* Login: badge sits over the logo without affecting flow or centring */
+/* Dashboard: wrap logo + badge so badge is superscript, not a flex item */
+.brand-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-right: 32px;
+  flex-shrink: 0;
+}
+
+/* Login: same absolute overlay so logo stays centred */
 .login-brand {
   position: relative;
   display: inline-block;
 }
 .login-brand .beta-badge {
-  position: absolute;
-  top: 0;
-  right: -38px;
-  margin: 0;
+  top: -4px;
+  right: -30px;
 }
 
 .brand-logo {
   height: 28px;
   width: auto;
-  margin-right: 32px;
-  flex-shrink: 0;
   display: block;
   object-fit: contain;
 }
