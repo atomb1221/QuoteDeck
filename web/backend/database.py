@@ -47,7 +47,11 @@ class ProductDatabase:
     # ── Helpers ────────────────────────────────────────────────────────────────
 
     _SECTION_TYPES = {'shs', 'rhs', 'chs', 'ub', 'uc', 'pfc', 'ea', 'ua',
-                      'tee', 'fb', 'rb', 'hb', 'ms', 'box'}
+                      'tee', 'fb', 'rb', 'hb', 'ms', 'box', 'dia', 'square'}
+
+    # Standard CHS outside diameters (mm) — snap customer input to nearest
+    _CHS_ODS = (21.3, 26.9, 33.7, 42.4, 48.3, 60.3, 76.1, 88.9,
+                114.3, 139.7, 168.3, 219.1)
 
     # Sheet size shorthand → standard mm dimensions used in DB descriptions
     _SHEET_SIZES = [
@@ -64,12 +68,16 @@ class ProductDatabase:
         # type synonyms
         (r'\bround\s+bar\b',      'dia'),
         (r'\bsolid\s+round\b',    'dia'),
+        (r'\bsquare\s+bar\b',     'square'),
+        (r'\bsolid\s+square\b',   'square'),
         (r'\bflat\s+bar\b',       'fb'),
         (r'\bangle\s+iron\b',     'angle'),
         (r'\bbox\s+iron\b',       'SHS'),
         (r'\bchannel\s+iron\b',   'channel'),
         (r'\bround\s+pipe\b',     'CHS'),
         (r'\bround\s+tube\b',     'CHS'),
+        (r'\bpipe\b',             'CHS'),
+        (r'\btube\b',             'CHS'),
     ]
 
     @staticmethod
@@ -174,23 +182,78 @@ class ProductDatabase:
                 return False
         return True
 
-    def find_all_products(self, search_term: str) -> List[Dict]:
-        """Return every DB product whose dimensions match the search term."""
-        search_term = self._expand_search(search_term)
-        _, s_nums = self._parse_section(search_term)
+    def _snap_chs_od(self, od: float) -> float:
+        """Snap a diameter to the nearest standard CHS outside diameter."""
+        return min(self._CHS_ODS, key=lambda x: abs(x - od))
 
-        if len(s_nums) < 2:
-            p = self.find_product(search_term)
-            return [p] if p else []
-
-        matches = []
-        seen = set()
+    def _match_chs(self, od: float) -> List[Dict]:
+        """Return all CHS products whose O/D matches (snapped to standard sizes)."""
+        od = self._snap_chs_od(od)
+        matches, seen = [], set()
         for p in self.products:
-            _, p_nums = self._parse_section(p["description"])
-            if self._dims_match(s_nums, p_nums):
-                key = self.normalize(p["description"])
+            if 'o/d' not in p['description'].lower():
+                continue
+            nums = tuple(float(n) for n in re.findall(r'\d+(?:\.\d+)?', p['description']))
+            if nums and abs(nums[0] - od) / max(nums[0], od, 0.001) < 0.02:
+                key = self.normalize(p['description'])
                 if key not in seen:
                     seen.add(key)
                     matches.append(p)
-
         return matches
+
+    def _match_single_dim(self, dim: float, keyword: str) -> List[Dict]:
+        """Return products containing keyword in description whose first number matches dim."""
+        matches, seen = [], set()
+        for p in self.products:
+            if keyword not in p['description'].lower():
+                continue
+            nums = tuple(float(n) for n in re.findall(r'\d+(?:\.\d+)?', p['description']))
+            if nums and abs(nums[0] - dim) / max(nums[0], dim, 0.001) < 0.05:
+                key = self.normalize(p['description'])
+                if key not in seen:
+                    seen.add(key)
+                    matches.append(p)
+        return matches
+
+    def find_all_products(self, search_term: str) -> List[Dict]:
+        """Return every DB product whose dimensions match the search term."""
+        expanded = self._expand_search(search_term)
+        s_type, s_nums = self._parse_section(expanded)
+
+        # No numbers at all — fall back to text search
+        if not s_nums:
+            p = self.find_product(expanded)
+            return [p] if p else []
+
+        # CHS / pipe / tube — match by outside diameter only
+        if s_type == 'chs':
+            return self._match_chs(s_nums[0])
+
+        # Round bar — "25 dia", "25mm dia"
+        if s_type == 'dia':
+            return self._match_single_dim(s_nums[0], 'dia')
+
+        # Square bar — "25 square", "25mm square"
+        if s_type == 'square':
+            return self._match_single_dim(s_nums[0], 'square')
+
+        # Bare "bar" with no round/square qualifier → return both for disambiguation
+        if re.search(r'\bbar\b', expanded, re.IGNORECASE) and not s_type:
+            return (self._match_single_dim(s_nums[0], 'dia') +
+                    self._match_single_dim(s_nums[0], 'square'))
+
+        # Multi-dim (angle, SHS, RHS, PFC, sheet, etc.) — prefix fuzzy match
+        if len(s_nums) >= 2:
+            matches, seen = [], set()
+            for p in self.products:
+                _, p_nums = self._parse_section(p["description"])
+                if self._dims_match(s_nums, p_nums):
+                    key = self.normalize(p["description"])
+                    if key not in seen:
+                        seen.add(key)
+                        matches.append(p)
+            return matches
+
+        # Single dim, unrecognised type — fall back to text search
+        p = self.find_product(expanded)
+        return [p] if p else []

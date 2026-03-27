@@ -29,19 +29,23 @@ CRITICAL — dimensions vs quantities:
 NORMALISATION — output standard metric dimensions + type:
 
 1. ROUND BAR: "25mm round bar", "25 dia", "Ø25", "25mm solid round" → "25 dia"
-2. PIPE/TUBE/CHS — map to nearest standard OD:
+2. SQUARE BAR: "25mm square bar", "25mm solid square", "25 square" → "25 square"
+3. AMBIGUOUS BAR: "25mm bar" or "25mm steel bar" (no round/square qualifier) → "25 bar"
+   (Python will ask the user to clarify round vs square)
+4. PIPE/TUBE/CHS — map to nearest standard OD:
    21mm→21.3, 27mm→26.9, 33mm→33.7, 42mm→42.4, 48mm→48.3,
    60mm→60.3, 76mm→76.1, 89mm→88.9, 114mm→114.3, 140mm→139.7, 168mm→168.3
-   Output as: "33.7 CHS"
-3. CHANNEL — imperial to metric:
+   Output as: "42.4 CHS" (include OD only, drop wall thickness unless explicitly given)
+   If wall thickness given: "42.4 x 3 CHS"
+5. CHANNEL — imperial to metric:
    4"→100 x 50, 5"→125 x 65, 6"→152 x 76, 8"→203 x 76, 10"→254 x 76
    Output as: "152 x 76 channel"
-4. ANGLE IRON = angle: "60x60x6 angle iron" → "60 x 60 x 6 angle"
-5. BOX IRON / BOX = SHS: "100x100x5 box iron" → "100 x 100 x 5 SHS"
-6. SHEETS: "8x4"=2500x1250, "10x5"=3000x1500. Always include thickness.
+6. ANGLE IRON = angle: "60x60x6 angle iron" → "60 x 60 x 6 angle"
+7. BOX IRON / BOX = SHS: "100x100x5 box iron" → "100 x 100 x 5 SHS"
+8. SHEETS: "8x4"=2500x1250, "10x5"=3000x1500. Always include thickness.
    "8 x 4 x 3mm HR sheet" → "2500 x 1250 x 3 HR sheet". length=0
-7. Galvanised→galv. Checker/chequer=same. HR=hot rolled, CR=cold rolled.
-8. Spacing: use " x " between dims. Remove trailing "mm" clutter.
+9. Galvanised→galv. Checker/chequer=same. HR=hot rolled, CR=cold rolled.
+10. Spacing: use " x " between dims. Remove trailing "mm" clutter.
 
 Return ONLY valid JSON:
 {{
