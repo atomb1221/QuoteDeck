@@ -832,6 +832,52 @@ tr:hover .btn-remove { display: block; }
   text-align: center;
 }
 
+/* ── Shooting star streaks ───────────────────────────────────────────────────── */
+.streak {
+  position: fixed;
+  bottom: -10vh;
+  left: -10vw;
+  width: 180px;
+  height: 2px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.9) 60%, rgba(255,255,255,1) 100%);
+  box-shadow: 0 0 6px 2px rgba(255,255,255,0.4);
+  transform-origin: left center;
+  transform: rotate(-38deg) scaleX(0);
+  opacity: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+@keyframes shoot {
+  0%   { transform: rotate(-38deg) translateX(0)    scaleX(0.3); opacity: 0; }
+  5%   { opacity: 0.85; }
+  60%  { transform: rotate(-38deg) translateX(130vw) scaleX(0.08); opacity: 0.5; }
+  100% { transform: rotate(-38deg) translateX(160vw) scaleX(0.04); opacity: 0; }
+}
+
+.streak-1 {
+  bottom: 15vh;
+  left: -5vw;
+  animation: shoot 6s ease-out infinite;
+  animation-delay: 0s;
+}
+.streak-2 {
+  bottom: 35vh;
+  left: -15vw;
+  width: 120px;
+  animation: shoot 7s ease-out infinite;
+  animation-delay: 2.5s;
+}
+.streak-3 {
+  bottom: 5vh;
+  left: -20vw;
+  width: 90px;
+  height: 1px;
+  animation: shoot 8s ease-out infinite;
+  animation-delay: 4.8s;
+}
+
 /* ── User pill in top bar ────────────────────────────────────────────────────── */
 .user-pill {
   display: flex;
