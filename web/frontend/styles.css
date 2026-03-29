@@ -832,30 +832,6 @@ tr:hover .btn-remove { display: block; }
   text-align: center;
 }
 
-/* ── Shooting star streaks ───────────────────────────────────────────────────── */
-@keyframes shoot {
-  0%        { transform: rotate(-38deg) translateX(-100px); opacity: 0; }
-  6%        { opacity: 0.85; }
-  70%, 100% { transform: rotate(-38deg) translateX(160vw);  opacity: 0; }
-}
-
-.streak {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 180px;
-  height: 2px;
-  background: linear-gradient(to right, transparent 0%, rgba(255,255,255,0.7) 50%, #fff 100%);
-  box-shadow: 0 0 8px 2px rgba(255,255,255,0.35);
-  transform-origin: left center;
-  opacity: 0;
-  z-index: 0;
-  pointer-events: none;
-}
-
-.streak-1 { bottom: 20vh; left: 0;     animation: shoot 6s ease-out infinite 0s; }
-.streak-2 { bottom: 45vh; left: -8vw;  width: 120px; height: 1px; animation: shoot 6s ease-out infinite 2.2s; }
-.streak-3 { bottom: 8vh;  left: -5vw;  width: 90px;  height: 1px; animation: shoot 6s ease-out infinite 4.5s; }
 
 /* ── User pill in top bar ────────────────────────────────────────────────────── */
 .user-pill {
