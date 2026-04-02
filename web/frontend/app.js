@@ -510,43 +510,56 @@ async function calculateQuote() {
   const rows = document.querySelectorAll('#items-tbody tr[data-index]');
   if (!rows.length) { toast('Extract items first.'); return; }
 
-
   const customerName = document.getElementById('customer-input').value.trim();
-  const fillTonnage  = parseFloat(document.getElementById('fill-tonnage').value) || 0;
 
-  const items = Array.from(rows).map(tr => {
-    const lenInput = tr.querySelector('[data-field=length]');
-    return {
-      product: extractedItems[tr.dataset.index].product,
-      qty:     parseFloat(tr.querySelector('[data-field=qty]').value)     || 1,
-      length:  lenInput ? (parseFloat(lenInput.value) || 0) : 0,
-      tonnage: parseFloat(tr.querySelector('[data-field=tonnage]').value) || 0,
-    };
-  });
+  // ── Compute entirely client-side ─────────────────────────────────────────
+  const lines = [];
+  let grandTotal = 0;
 
-  try {
-    const res = await fetch('/calculate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        items,
-        customer_name: customerName,
-        tonnage_price: fillTonnage,
-      }),
-    });
+  Array.from(rows).forEach(tr => {
+    const idx  = parseInt(tr.dataset.index);
+    const item = extractedItems[idx];
+    if (!item || item.not_found || item.ambiguous) return;
 
-    const data = await res.json();
-    renderResults(data);
+    const weight    = parseFloat(tr.dataset.weight)    || 0;
+    const isSheet   = tr.dataset.isSheet === 'true';
+    const sheetArea = parseFloat(tr.dataset.sheetArea) || 0;
+    const qty       = parseFloat(tr.querySelector('[data-field=qty]')?.value)     || 1;
+    const tonnage   = parseFloat(tr.querySelector('[data-field=tonnage]')?.value) || 0;
+    const lenInput  = tr.querySelector('[data-field=length]');
+    const length    = lenInput ? (parseFloat(lenInput.value) || 0) : 0;
 
-    // Refresh quote cards — use customer_id returned by the server
-    const customerId = data.customer_id;
-    if (customerId) {
-      selectedCustomerId = customerId;
-      await loadCustomerPrices(customerId);
+    let total = 0;
+    if (isSheet) {
+      if (weight && sheetArea && tonnage) total = (weight * sheetArea * qty * tonnage) / 1000;
+    } else {
+      if (weight && length && tonnage) total = (weight * tonnage / 1000) * length * qty;
     }
 
-  } catch (e) {
-    toast(`Request failed: ${e.message}`, true);
+    grandTotal += total;
+    lines.push({ product: item.product, length, qty, tonnage, weight, is_sheet: isSheet, total: Math.round(total * 100) / 100 });
+  });
+
+  renderResults({ lines, grand_total: grandTotal });
+
+  // ── Save quote to DB in background (non-blocking) ────────────────────────
+  if (customerName && lines.length) {
+    try {
+      const res = await fetch('/calculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: lines.map(l => ({ product: l.product, length: l.length, qty: l.qty, tonnage: l.tonnage })),
+          customer_name: customerName,
+          tonnage_price: 0,
+        }),
+      });
+      const data = await res.json();
+      if (data.customer_id) {
+        selectedCustomerId = data.customer_id;
+        await loadCustomerPrices(data.customer_id);
+      }
+    } catch (_) { /* quote save failed — results already shown */ }
   }
 }
 
