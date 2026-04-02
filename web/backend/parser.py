@@ -37,7 +37,10 @@ NORMALISATION — output standard metric dimensions + type:
    60mm→60.3, 76mm→76.1, 89mm→88.9, 114mm→114.3, 140mm→139.7, 168mm→168.3
    Output as: "42.4 CHS" (include OD only, drop wall thickness unless explicitly given)
    If wall thickness given: "42.4 x 3 CHS"
-5. CHANNEL — imperial to metric:
+5. IPE BEAMS: "IPE100", "IPE 100", "ipe100", "I.P.E 100", "I.P.E. 100", "IPE beam 100" → "IPE 100"
+   Standard depths: 80, 100, 120, 140, 160, 180, 200, 220, 240, 270, 300, 330, 360, 400
+   IPE A series (lighter variant): "IPEA 100", "IPE 100A" → "IPEA 100"
+6. CHANNEL — imperial to metric:
    4"→100 x 50, 5"→125 x 65, 6"→152 x 76, 8"→203 x 76, 10"→254 x 76
    Output as: "152 x 76 channel"
 6. ANGLE IRON = angle: "60x60x6 angle iron" → "60 x 60 x 6 angle"

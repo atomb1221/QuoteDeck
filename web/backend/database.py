@@ -19,6 +19,7 @@ _TYPE_KEYWORDS: Dict[str, List[str]] = {
     "uc":     ["uc ", "universal column", " column"],
     "pfc":    ["pfc", "channel"],
     "round":  ["round bar", "round ", " rb "],
+    "ipe":    ["ipe", "i.p.e", "ipea"],
 }
 
 
@@ -47,7 +48,7 @@ class ProductDatabase:
     # ── Helpers ────────────────────────────────────────────────────────────────
 
     _SECTION_TYPES = {'shs', 'rhs', 'chs', 'ub', 'uc', 'pfc', 'ea', 'ua',
-                      'tee', 'fb', 'rb', 'hb', 'ms', 'box', 'dia', 'square'}
+                      'tee', 'fb', 'rb', 'hb', 'ms', 'box', 'dia', 'square', 'ipe', 'ipea'}
 
     # Standard CHS outside diameters (mm) — snap customer input to nearest
     _CHS_ODS = (21.3, 26.9, 33.7, 42.4, 48.3, 60.3, 76.1, 88.9,
@@ -78,6 +79,9 @@ class ProductDatabase:
         (r'\bround\s+tube\b',     'CHS'),
         (r'\bpipe\b',             'CHS'),
         (r'\btube\b',             'CHS'),
+        # IPE beams: "IPE100" / "I.P.E. 100" / "IPEA 100" → normalised form
+        (r'\bIPEA\s*(\d+)',       r'IPEA \1'),
+        (r'\bI\.?P\.?E\.?\s*(\d+)', r'IPE \1'),
     ]
 
     @staticmethod
@@ -215,6 +219,26 @@ class ProductDatabase:
                     matches.append(p)
         return matches
 
+    def _match_ipe(self, size: float, a_series: bool = False) -> List[Dict]:
+        """Return IPE products matching the nominal depth.
+        a_series=True returns only A/AA variants; False returns only standard."""
+        size_str = str(int(round(size)))
+        matches, seen = [], set()
+        for p in self.products:
+            if p.get('type', '').lower() != 'ipe':
+                continue
+            m = re.match(r'I\.?P\.?E\.?\s+(\d+)', p['description'], re.IGNORECASE)
+            if not m or m.group(1) != size_str:
+                continue
+            suffix = p['description'][m.end():].strip()
+            is_a = bool(re.match(r'^A\b|^AA\b', suffix, re.IGNORECASE))
+            if is_a == a_series:
+                key = self.normalize(p['description'])
+                if key not in seen:
+                    seen.add(key)
+                    matches.append(p)
+        return matches
+
     def find_all_products(self, search_term: str) -> List[Dict]:
         """Return every DB product whose dimensions match the search term."""
         expanded = self._expand_search(search_term)
@@ -224,6 +248,12 @@ class ProductDatabase:
         if not s_nums:
             p = self.find_product(expanded)
             return [p] if p else []
+
+        # IPE beams — match by nominal depth
+        if s_type == 'ipe':
+            return self._match_ipe(s_nums[0], a_series=False)
+        if s_type == 'ipea':
+            return self._match_ipe(s_nums[0], a_series=True)
 
         # CHS / pipe / tube — match by outside diameter only
         if s_type == 'chs':
