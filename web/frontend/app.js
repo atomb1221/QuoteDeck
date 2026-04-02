@@ -514,12 +514,15 @@ async function calculateQuote() {
   const customerName = document.getElementById('customer-input').value.trim();
   const fillTonnage  = parseFloat(document.getElementById('fill-tonnage').value) || 0;
 
-  const items = Array.from(rows).map(tr => ({
-    product: extractedItems[tr.dataset.index].product,
-    qty:     parseFloat(tr.querySelector('[data-field=qty]').value)     || 1,
-    length:  parseFloat(tr.querySelector('[data-field=length]').value)  || 0,
-    tonnage: parseFloat(tr.querySelector('[data-field=tonnage]').value) || 0,
-  }));
+  const items = Array.from(rows).map(tr => {
+    const lenInput = tr.querySelector('[data-field=length]');
+    return {
+      product: extractedItems[tr.dataset.index].product,
+      qty:     parseFloat(tr.querySelector('[data-field=qty]').value)     || 1,
+      length:  lenInput ? (parseFloat(lenInput.value) || 0) : 0,
+      tonnage: parseFloat(tr.querySelector('[data-field=tonnage]').value) || 0,
+    };
+  });
 
   try {
     const res = await fetch('/calculate', {
